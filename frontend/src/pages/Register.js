@@ -46,6 +46,9 @@ function Register() {
   };
 
   return (
+
+    
+
     <div style={{
       maxWidth: 450,
       margin: "40px auto",
@@ -144,7 +147,25 @@ function Register() {
           {loading ? "Registering..." : "Register"}
         </button>
 
+
+
       </form>
+       <button type="button"
+          onClick={() => navigate("/login")}
+          style={{
+            width: "100%",
+            marginTop: 12,
+            padding: 10,
+            background: "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6
+          }}
+          disabled={loading}
+        >
+          {loading ? "Going to login page..." : "Back to Login page"}
+        </button>
+
     </div>
   );
 }
