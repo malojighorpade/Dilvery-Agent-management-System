@@ -8,19 +8,27 @@ export default function StaffDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+useEffect(() => {
+  dashboardAPI.getStaff()
+    .then(r => {
+      console.log("API RESPONSE:", r.data); // 🔍 DEBUG
 
-  useEffect(() => {
-    dashboardAPI.getStaff()
-      .then(r => setData(r.data.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+      const apiData = r.data.data || r.data; // ✅ SAFE FIX
+      setData(apiData);
+    })
+    .catch(err => {
+      console.error("API ERROR:", err);
+    })
+    .finally(() => setLoading(false));
+}, []);
+  
 
   const stats = [
     { label: 'Assigned Orders', value: data?.assignedOrders || 0, icon: Truck, color: '#2563eb', bg: '#eff6ff' },
     { label: 'Delivered Today', value: data?.deliveredToday || 0, icon: CheckCircle, color: '#16a34a', bg: '#f0fdf4' },
     { label: 'Pending', value: data?.pendingDeliveries || 0, icon: Clock, color: '#d97706', bg: '#fffbeb' },
   ];
+  console.log("DATA STATE:", data);
 
   return (
     <div style={{ padding: 16 }}>

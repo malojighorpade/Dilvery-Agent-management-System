@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+// ✅ ADD THIS (IMPORTANT)
+import Register from './pages/Register';
+
 // Admin Pages
 import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -29,28 +32,59 @@ import StaffPayments from './pages/staff/StaffPayments';
 // Shared
 import Login from './pages/Login';
 
+
+// 🔐 Private Route
 const PrivateRoute = ({ children, role }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loading-spinner"><div className="spinner" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
+
+  if (loading) {
+    return <div className="loading-spinner"><div className="spinner" /></div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role && user.role !== role) {
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
+  }
+
   return children;
 };
 
+
+// 🌐 Public Route
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loading-spinner"><div className="spinner" /></div>;
-  if (user) return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
+
+  if (loading) {
+    return <div className="loading-spinner"><div className="spinner" /></div>;
+  }
+
+  if (user) {
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
+  }
+
   return children;
 };
 
+
+// 🚀 Routes
 function AppRoutes() {
   return (
     <Routes>
+
+      {/* ✅ Register Route (ADDED CORRECTLY) */}
+      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+      {/* Login */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
       {/* Admin Routes */}
-      <Route path="/admin" element={<PrivateRoute role="admin"><AdminLayout /></PrivateRoute>}>
+      <Route
+        path="/admin"
+        element={<PrivateRoute role="admin"><AdminLayout /></PrivateRoute>}
+      >
         <Route index element={<Dashboard />} />
         <Route path="orders" element={<Orders />} />
         <Route path="products" element={<Products />} />
@@ -66,7 +100,10 @@ function AppRoutes() {
       </Route>
 
       {/* Staff Routes */}
-      <Route path="/staff" element={<PrivateRoute role="staff"><StaffLayout /></PrivateRoute>}>
+      <Route
+        path="/staff"
+        element={<PrivateRoute role="delivery agent"><StaffLayout /></PrivateRoute>}
+      >
         <Route index element={<StaffDashboard />} />
         <Route path="deliveries" element={<MyDeliveries />} />
         <Route path="deliveries/:id" element={<DeliveryDetail />} />
@@ -74,18 +111,31 @@ function AppRoutes() {
         <Route path="payments" element={<StaffPayments />} />
       </Route>
 
+      {/* Default */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
+
     </Routes>
   );
 }
 
+
+// 🌍 App Wrapper
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
-        <Toaster position="top-right" toastOptions={{ duration: 3000, style: { fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' } }} />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '0.875rem'
+            }
+          }}
+        />
       </AuthProvider>
     </BrowserRouter>
   );

@@ -6,13 +6,36 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
-    role: { type: String, enum: ['admin', 'staff'], default: 'staff' },
+    role: { type: String, enum: ['admin', 'delivery agent'], default: 'delivery agent' },
     phone: { type: String, trim: true },
     address: { type: String },
     isActive: { type: Boolean, default: true },
     profileImage: { type: String },
     assignedRoutes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Store' }],
     lastLogin: { type: Date },
+    vehicleType: {
+  type: String,
+  enum: ['low', 'mid', 'heavy'],
+  required: function () {
+    return this.role === "delivery agent";
+  }
+},
+
+licenseNumber: {
+  type: String,
+  required: function () {
+    return this.role === "delivery agent";
+  }
+},
+vehicleNumber: {
+  type: String,
+  required: function () {
+    return this.role === "delivery agent";
+  }
+}
+
+
+
   },
   { timestamps: true }
 );

@@ -59,6 +59,13 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
   });
 });
+// Serve frontend (only for production build)
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+// Catch all routes → React handles
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+});
 
 // MongoDB Connection
 mongoose

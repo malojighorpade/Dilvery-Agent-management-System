@@ -2,8 +2,13 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Package, Eye, EyeOff, Truck } from 'lucide-react';
+import { Link } from "react-router-dom";
+
+import { useNavigate } from "react-router-dom"
+
 
 export default function Login() {
+  const navigate = useNavigate();
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
@@ -14,8 +19,12 @@ export default function Login() {
     if (!form.email || !form.password) return toast.error('Please fill all fields');
     setLoading(true);
     try {
-      await login(form.email, form.password);
-      toast.success('Welcome back!');
+    const user = await login(form.email, form.password); // ✅ GET USER
+toast.success('Welcome back!');
+
+navigate(user.role === "admin" ? "/admin" : "/staff"); 
+console.log("USER:", user);// ✅ NOW WORKS
+
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
@@ -98,7 +107,42 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+      
+        <div style={{
+  marginTop: 20,
+  padding: 16,
+  background: '#f9fafb',
+  borderRadius: 10,
+  border: '1px solid #e5e7eb',
+  textAlign: 'center'
+}}>
+  <p style={{
+    fontSize: '0.75rem',
+    color: '#6b7280',
+    fontWeight: 600,
+    marginBottom: 8,
+    letterSpacing: 1
+  }}>
+    NEW HERE?
+  </p>
 
+  <div style={{
+    fontSize: '0.875rem',
+    color: '#374151'
+  }}>
+    Don’t have an account?{" "}
+    <Link
+      to="/register"
+      style={{
+        color: '#2563eb',
+        fontWeight: 600,
+        textDecoration: 'none'
+      }}
+    >
+      Register now
+    </Link>
+  </div>
+</div>
         <div style={{ marginTop: 32, padding: 16, background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
           <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, marginBottom: 8 }}>DEMO CREDENTIALS</p>
           <div style={{ fontSize: '0.8125rem', color: '#374151', lineHeight: 1.8 }}>

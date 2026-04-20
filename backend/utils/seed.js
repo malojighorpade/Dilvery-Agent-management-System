@@ -25,8 +25,8 @@ async function seed() {
   });
 
   // Staff users
-  const staff1 = await User.create({ name: 'Rahul Sharma', email: 'rahul@dms.com', password: 'staff123', role: 'staff', phone: '9876543210' });
-  const staff2 = await User.create({ name: 'Priya Singh', email: 'priya@dms.com', password: 'staff123', role: 'staff', phone: '9876543211' });
+  const staff1 = await User.create({ name: 'Rahul Sharma', email: 'rahul@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543210',vehicleType:'low' ,licenseNumber:"124343443",'Vnumberplate_no':'MH451123'});
+  const staff2 = await User.create({ name: 'Priya Singh', email: 'priya@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543211',vehicleType:'mid',licenseNumber:"2342434338" ,Vnumberplate_no:'MH451123'});
 
   // Brands
   const brand1 = await Brand.create({ name: 'HinduCo FMCG', description: 'Fast moving consumer goods', contactPerson: 'Raju Bhai', contactPhone: '9000000001' });
