@@ -63,7 +63,7 @@ exports.deleteUser = async (req, res) => {
 // @route GET /api/users/staff/list
 exports.getStaffList = async (req, res) => {
   try {
-    const staff = await User.find({ role: 'staff', isActive: true }).select('name email phone');
+    const staff = await User.find({ role: 'delivery agent', isActive: true }).select('name email phone');
     res.json({ success: true, data: staff });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

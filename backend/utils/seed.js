@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
 dotenv.config();
 
 const User = require('../models/User');
@@ -9,66 +10,145 @@ const Inventory = require('../models/Inventory');
 const Industry = require('../models/Industry');
 const Store = require('../models/Store');
 
+const {
+  Payment,
+  OnlinePayment,
+  CashPayment,
+  ChequePayment
+} = require('../models/Payment');
+
 async function seed() {
   await mongoose.connect(process.env.MONGO_URI);
-  console.log('Connected to MongoDB');
+  console.log('✅ Connected to MongoDB');
 
-  // Clear existing
   await Promise.all([
-    User.deleteMany({}), Brand.deleteMany({}), Product.deleteMany({}),
-    Inventory.deleteMany({}), Industry.deleteMany({}), Store.deleteMany({}),
+    User.deleteMany({}),
+    Brand.deleteMany({}),
+    Product.deleteMany({}),
+    Inventory.deleteMany({}),
+    Industry.deleteMany({}),
+    Store.deleteMany({}),
+    Payment.deleteMany({}),
+    OnlinePayment.deleteMany({}),
+    CashPayment.deleteMany({}),
+    ChequePayment.deleteMany({})
   ]);
 
-  // Admin user
+  // 🔐 PASSWORD
+
+
+  // 👤 USERS
   const admin = await User.create({
-    name: 'Admin User', email: 'admin@dms.com', password: 'admin123', role: 'admin', phone: '9999999999',
+    name: 'Admin User',
+    email: 'admin@dms.com',
+    password: "admin123",
+    role: 'admin',
+    phone: '9999999999',
   });
 
-  // Staff users
-  const staff1 = await User.create({ name: 'Rahul Sharma', email: 'rahul@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543210',vehicleType:'low' ,licenseNumber:"124343443",'Vnumberplate_no':'MH451123'});
-  const staff2 = await User.create({ name: 'Priya Singh', email: 'priya@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543211',vehicleType:'mid',licenseNumber:"2342434338" ,Vnumberplate_no:'MH451123'});
-
-  // Brands
-  const brand1 = await Brand.create({ name: 'HinduCo FMCG', description: 'Fast moving consumer goods', contactPerson: 'Raju Bhai', contactPhone: '9000000001' });
-  const brand2 = await Brand.create({ name: 'Sunrise Beverages', description: 'Beverage brand', contactPerson: 'Suresh Kumar', contactPhone: '9000000002' });
-
-  // Products
-  const products = await Product.insertMany([
-    { name: 'Soap Bar 100g', sku: 'SOAP100', brand: brand1._id, category: 'Personal Care', unit: 'piece', mrp: 30, sellingPrice: 25 },
-    { name: 'Shampoo 200ml', sku: 'SHAM200', brand: brand1._id, category: 'Personal Care', unit: 'piece', mrp: 120, sellingPrice: 100 },
-    { name: 'Detergent 1kg', sku: 'DET1KG', brand: brand1._id, category: 'Household', unit: 'kg', mrp: 90, sellingPrice: 75 },
-    { name: 'Orange Juice 1L', sku: 'OJ1L', brand: brand2._id, category: 'Beverages', unit: 'litre', mrp: 80, sellingPrice: 65 },
-    { name: 'Mango Drink 500ml', sku: 'MD500', brand: brand2._id, category: 'Beverages', unit: 'piece', mrp: 40, sellingPrice: 32 },
-  ]);
-
-  // Inventory
-  await Inventory.insertMany(products.map((p, i) => ({ product: p._id, currentStock: [500, 300, 400, 200, 600][i], reorderLevel: 50 })));
-
-  // Industry
-  const industry = await Industry.create({
-    name: 'Metro Distributors Pvt Ltd',
-    type: 'FMCG Distributor',
-    gstin: '27AAPFU0939F1Z5',
-    contactPerson: 'Mahesh Gupta',
-    email: 'metro@example.com',
-    phone: '9800000001',
-    address: { street: '12, Industrial Area', city: 'Pune', state: 'Maharashtra', pincode: '411001' },
-    brands: [brand1._id, brand2._id],
+  const staff1 = await User.create({
+    name: 'Rahul Sharma',
+    email: 'rahul@dms.com',
+    password: "staffR123",
+    role: 'delivery agent',
+    phone: '9876543210',
+    vehicleType: 'low',
+    licenseNumber: "124343443",
+    vehicleNumber: 'MH45AB1234'
   });
 
-  // Stores
-  await Store.insertMany([
-    { name: 'Sharma General Store', ownerName: 'Ramesh Sharma', phone: '9700000001', route: 'Route A', assignedStaff: staff1._id, address: { street: 'MG Road', city: 'Pune', pincode: '411002' } },
-    { name: 'Patel Kirana', ownerName: 'Suresh Patel', phone: '9700000002', route: 'Route A', assignedStaff: staff1._id, address: { street: 'FC Road', city: 'Pune', pincode: '411004' } },
-    { name: 'Kumar Super Mart', ownerName: 'Vikram Kumar', phone: '9700000003', route: 'Route B', assignedStaff: staff2._id, address: { street: 'JM Road', city: 'Pune', pincode: '411005' } },
-    { name: 'Singh Provisions', ownerName: 'Gurpreet Singh', phone: '9700000004', route: 'Route B', assignedStaff: staff2._id, address: { street: 'Deccan', city: 'Pune', pincode: '411004' } },
+  const staff2 = await User.create({
+    name: 'maloji Singh',
+    email: 'maloji@dms.com',
+    password: "staffM123",
+    role: 'delivery agent',
+    phone: '9876543211',
+    vehicleType: 'mid',
+    licenseNumber: "2342434338",
+    vehicleNumber: 'MH45CD5678'
+  });
+
+  // 🏪 STORE
+  const stores = await Store.insertMany([
+    {
+      name: 'Sharma General Store',
+      ownerName: 'Ramesh Sharma',
+      phone: '9700000001',
+      route: 'Route A',
+      assignedStaff: staff1._id,
+      address: { street: 'MG Road', city: 'Pune', pincode: '411002' }
+    }
   ]);
 
-  console.log('✅ Seed complete!');
-  console.log('Admin: admin@dms.com / admin123');
-  console.log('Staff: rahul@dms.com / staff123');
-  console.log('Staff: priya@dms.com / staff123');
+  const store = stores[0];
+
+  // ===============================
+  // 💳 ONLINE PAYMENT
+  // ===============================
+  const onlinePayment = await Payment.create({
+    store: store._id,
+    storeName: store.name, // ✅ FIX
+    amount: 1000,
+    paymentMode: 'online',
+    collectedBy: staff1._id
+  });
+
+  await OnlinePayment.create({
+    payment: onlinePayment._id,
+    orderId: 'ORD001',
+    transactionId: 'TXN1001',
+    amount: 1000,
+    date: new Date(),
+  });
+
+  // ===============================
+  // 💵 CASH PAYMENT
+  // ===============================
+  const cashData = [
+    { amount: 5000, denominations: { '500': 5, '200': 10, '100': 5 } },
+    { amount: 3000, denominations: { '500': 4, '200': 5 } }
+  ];
+
+  for (let item of cashData) {
+    const payment = await Payment.create({
+      store: store._id,
+      storeName: store.name, // ✅ FIX
+      amount: item.amount,
+      paymentMode: 'cash',
+      collectedBy: staff1._id
+    });
+
+    await CashPayment.create({
+      payment: payment._id,
+      amount: payment.amount,
+      denominations: item.denominations
+    });
+  }
+
+  // ===============================
+  // 🏦 CHEQUE PAYMENT
+  // ===============================
+  const chequePayment = await Payment.create({
+    store: store._id,
+    storeName: store.name, // ✅ FIX
+    amount: 2000,
+    paymentMode: 'cheque',
+    collectedBy: staff1._id
+  });
+
+  await ChequePayment.create({
+    payment: chequePayment._id,
+    chequeNumber: 'CHQ123456',
+    amount: 2000,
+    chequeDate: new Date('2026-04-10'),
+    chequeImage: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+  });
+
+  console.log('🎉 Seed completed successfully!');
   process.exit(0);
 }
 
-seed().catch(err => { console.error(err); process.exit(1); });
+seed().catch(err => {
+  console.error('❌ Seed error:', err);
+  process.exit(1);
+});

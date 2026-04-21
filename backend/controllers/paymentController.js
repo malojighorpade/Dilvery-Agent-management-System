@@ -1,16 +1,17 @@
-const Payment = require('../models/Payment');
+const {Payment }= require('../models/Payment');
 const Invoice = require('../models/Invoice');
 const Store = require('../models/Store');
 
 exports.getPayments = async (req, res) => {
   try {
+    
     const { paymentMode, status, store, collectedBy, page = 1, limit = 20 } = req.query;
     const filter = {};
     if (paymentMode) filter.paymentMode = paymentMode;
     if (status) filter.status = status;
     if (store) filter.store = store;
     if (collectedBy) filter.collectedBy = collectedBy;
-    if (req.user.role === 'staff') filter.collectedBy = req.user._id;
+    if (req.user.role === 'delivery agent') filter.collectedBy = req.user._id;
     const skip = (page - 1) * limit;
     const [payments, total] = await Promise.all([
       Payment.find(filter)
@@ -26,10 +27,12 @@ exports.getPayments = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+  
 };
 
 exports.getPayment = async (req, res) => {
   try {
+    
     const payment = await Payment.findById(req.params.id)
       .populate('store')
       .populate('invoice')
@@ -69,7 +72,7 @@ exports.getPaymentSummary = async (req, res) => {
       if (startDate) match.createdAt.$gte = new Date(startDate);
       if (endDate) match.createdAt.$lte = new Date(endDate);
     }
-    if (req.user.role === 'staff') match.collectedBy = req.user._id;
+    if (req.user.role === 'delivery agent') match.collectedBy = req.user._id;
 
     const summary = await Payment.aggregate([
       { $match: match },
