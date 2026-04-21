@@ -1,5 +1,5 @@
 const Order = require('../models/Order');
-const Payment = require('../models/Payment');
+const {Payment} = require('../models/Payment');
 const DeliveryLog = require('../models/DeliveryLog');
 const Inventory = require('../models/Inventory');
 const User = require('../models/User');
@@ -11,6 +11,7 @@ exports.getAdminDashboard = async (req, res) => {
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59);
+    
 
     const [
       totalOrders, pendingOrders, deliveredToday,
@@ -68,6 +69,7 @@ exports.getAdminDashboard = async (req, res) => {
   }
 };
 
+
 exports.getStaffDashboard = async (req, res) => {
   try {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -83,6 +85,7 @@ exports.getStaffDashboard = async (req, res) => {
         { $group: { _id: '$paymentMode', total: { $sum: '$amount' }, count: { $sum: 1 } } },
       ]),
     ]);
+    
 
     res.json({
       success: true,
@@ -91,4 +94,6 @@ exports.getStaffDashboard = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+  
 };
+

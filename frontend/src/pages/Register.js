@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -22,23 +20,44 @@ function Register() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Handle input change
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    let updatedForm = { ...form, [name]: value };
+
+    // 🔥 Reset vehicle fields if role = admin
+    if (name === "role" && value === "admin") {
+      updatedForm.vehicleType = "";
+      updatedForm.licenseNumber = "";
+      updatedForm.vehicleNumber = "";
+    }
+
+    setForm(updatedForm);
   };
 
+  // ✅ Handle submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await axios.post(
-        "/api/auth/register",
-        form
-      );
+      let payload = { ...form };
+
+      // 🔥 Remove vehicle fields for admin
+      if (form.role === "admin") {
+        delete payload.vehicleType;
+        delete payload.licenseNumber;
+        delete payload.vehicleNumber;
+      }
+
+      await axios.post("/api/auth/register", payload);
 
       alert("User registered successfully!");
       navigate("/login");
+
     } catch (err) {
+      console.error("REGISTER ERROR:", err.response?.data);
       alert(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
@@ -46,9 +65,6 @@ function Register() {
   };
 
   return (
-
-    
-
     <div style={{
       maxWidth: 450,
       margin: "40px auto",
@@ -62,17 +78,34 @@ function Register() {
 
       <form onSubmit={handleSubmit}>
 
-        <input name="name" placeholder="Full Name"
-          className="form-control" onChange={handleChange} />
+        <input
+          name="name"
+          placeholder="Full Name"
+          className="form-control"
+          onChange={handleChange}
+        />
 
-        <input name="email" type="email" placeholder="Email"
-          className="form-control" onChange={handleChange} />
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          className="form-control"
+          onChange={handleChange}
+        />
 
-        <input name="phone" placeholder="Phone"
-          className="form-control" onChange={handleChange} />
+        <input
+          name="phone"
+          placeholder="Phone"
+          className="form-control"
+          onChange={handleChange}
+        />
 
         {/* Role */}
-        <select name="role" className="form-control" onChange={handleChange}>
+        <select
+          name="role"
+          className="form-control"
+          onChange={handleChange}
+        >
           <option value="delivery agent">Delivery Agent</option>
           <option value="admin">Admin</option>
         </select>
@@ -87,7 +120,8 @@ function Register() {
             onChange={handleChange}
             style={{ paddingRight: 40 }}
           />
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setShowPw(!showPw)}
             style={{
               position: "absolute",
@@ -95,16 +129,17 @@ function Register() {
               top: "50%",
               transform: "translateY(-50%)",
               border: "none",
-              background: "none"
-            }}>
-            {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+              background: "none",
+              cursor: "pointer"
+            }}
+          >
+            {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
 
-        {/* 🚗 SHOW ONLY IF DELIVERY AGENT */}
+        {/* 🚗 Show only for delivery agent */}
         {form.role === "delivery agent" && (
           <>
-            {/* Vehicle Type Dropdown */}
             <select
               name="vehicleType"
               className="form-control"
@@ -132,7 +167,8 @@ function Register() {
           </>
         )}
 
-        <button type="submit"
+        <button
+          type="submit"
           style={{
             width: "100%",
             marginTop: 12,
@@ -146,26 +182,24 @@ function Register() {
         >
           {loading ? "Registering..." : "Register"}
         </button>
-
-
-
       </form>
-       <button type="button"
-          onClick={() => navigate("/login")}
-          style={{
-            width: "100%",
-            marginTop: 12,
-            padding: 10,
-            background: "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6
-          }}
-          disabled={loading}
-        >
-          {loading ? "Going to login page..." : "Back to Login page"}
-        </button>
 
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={() => navigate("/login")}
+        style={{
+          width: "100%",
+          marginTop: 12,
+          padding: 10,
+          background: "#6b7280",
+          color: "#fff",
+          border: "none",
+          borderRadius: 6
+        }}
+      >
+        Back to Login page
+      </button>
     </div>
   );
 }

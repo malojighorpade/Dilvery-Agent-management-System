@@ -157,11 +157,7 @@ exports.deleteUser = async (req, res) => {
 // =====================================
 exports.getStaffList = async (req, res) => {
   try {
-    const staff = await User.find({
-      role: 'staff',
-      isActive: true
-    }).select('name email phone');
-
+    const staff = await User.find({ role: 'staff', isActive: true }).select('name email phone');
     res.json({ success: true, data: staff });
 
   } catch (err) {

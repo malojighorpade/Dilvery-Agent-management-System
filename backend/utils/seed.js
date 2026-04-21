@@ -34,40 +34,14 @@ async function seed() {
     ChequePayment.deleteMany({})
   ]);
 
-  // 🔐 PASSWORD
-  const adminPass = await bcrypt.hash('admin123', 10);
-  const staffPass = await bcrypt.hash('staff123', 10);
-
-  // 👤 USERS
+  // Admin user
   const admin = await User.create({
-    name: 'Admin User',
-    email: 'admin@dms.com',
-    password: adminPass,
-    role: 'admin',
-    phone: '9999999999',
+    name: 'Admin User', email: 'admin@dms.com', password: 'admin123', role: 'admin', phone: '9999999999',
   });
 
-  const staff1 = await User.create({
-    name: 'Rahul Sharma',
-    email: 'rahul@dms.com',
-    password: staffPass,
-    role: 'delivery agent',
-    phone: '9876543210',
-    vehicleType: 'low',
-    licenseNumber: "124343443",
-    vehicleNumber: 'MH45AB1234'
-  });
-
-  const staff2 = await User.create({
-    name: 'Priya Singh',
-    email: 'priya@dms.com',
-    password: staffPass,
-    role: 'delivery agent',
-    phone: '9876543211',
-    vehicleType: 'mid',
-    licenseNumber: "2342434338",
-    vehicleNumber: 'MH45CD5678'
-  });
+  // Staff users
+  const staff1 = await User.create({ name: 'Rahul Sharma', email: 'rahul@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543210',vehicleType:'low' ,licenseNumber:"124343443",'Vnumberplate_no':'MH451123'});
+  const staff2 = await User.create({ name: 'Priya Singh', email: 'priya@dms.com', password: 'staff123', role: 'dilivery agent', phone: '9876543211',vehicleType:'mid',licenseNumber:"2342434338" ,Vnumberplate_no:'MH451123'});
 
   // 🏪 STORE
   const stores = await Store.insertMany([
