@@ -63,8 +63,13 @@ export default function Industries() {
           <div className="form-group"><label className="form-label">Phone *</label><input className="form-control" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
           <div className="form-group"><label className="form-label">Email</label><input className="form-control" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
           <div className="form-group"><label className="form-label">GSTIN</label><input className="form-control" value={form.gstin} onChange={e => setForm({ ...form, gstin: e.target.value })} /></div>
+                   <div className="form-group"><label className="form-label">Street</label><input className="form-control" value={form.address.street} onChange={e => setForm({ ...form, address: { ...form.address, street: e.target.value } })} /></div>
+
           <div className="form-group"><label className="form-label">City</label><input className="form-control" value={form.address.city} onChange={e => setForm({ ...form, address: { ...form.address, city: e.target.value } })} /></div>
           <div className="form-group"><label className="form-label">State</label><input className="form-control" value={form.address.state} onChange={e => setForm({ ...form, address: { ...form.address, state: e.target.value } })} /></div>
+          <div className="form-group"><label className="form-label">Pincode</label><input className="form-control" value={form.address.pincode} onChange={e => setForm({ ...form, address: { ...form.address, pincode: e.target.value } })} /></div>
+
+          
         </div>
         <div className="form-group">
           <label className="form-label">Associated Brands</label>

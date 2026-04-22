@@ -113,23 +113,6 @@ const [stores, setStores] = useState([]);
   const columns = [
     { key: 'orderNumber', label: 'Order #', render: r => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{r.orderNumber}</span> },
     { key: 'industry', label: 'Industry', render: r => r.industry?.name || '—' },
-   { 
-  key: 'store', 
-  label: 'Store Name', 
-  render: r => {
-    // ❌ no store at all
-    if (!r.store) return '—';
-
-    // ✅ populated object
-    if (typeof r.store === 'object') {
-      return r.store?.name || '—';
-    }
-
-    // ✅ store is ID → match from stores list
-    const found = stores.find(s => s._id === r.store);
-    return found?.name || '—';
-  }
-},
     { key: 'totalAmount', label: 'Amount', render: r => <span style={{ fontWeight: 600 }}>₹{r.totalAmount?.toLocaleString()}</span> },
     { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
     { key: 'priority', label: 'Priority', render: r => <StatusBadge status={r.priority} /> },

@@ -8,10 +8,11 @@ const productSchema = new mongoose.Schema(
     category: { type: String, required: true },
     description: { type: String },
     unit: { type: String, enum: ['piece', 'box', 'kg', 'litre', 'dozen', 'carton'], default: 'piece' },
-    mrp: { type: Number, required: true, min: 0 },
-    sellingPrice: { type: Number, required: true, min: 0 },
+    amount: { type: Number, required: true, min: 0 },
+   
     image: { type: String },
     isActive: { type: Boolean, default: true },
+    
   },
   { timestamps: true }
 );

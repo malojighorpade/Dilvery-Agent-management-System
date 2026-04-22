@@ -19,6 +19,7 @@ exports.getOrders = async (req, res) => {
     const [orders, total] = await Promise.all([
       Order.find(filter)
         .populate('industry', 'name')
+        .populate('store', 'name')
         .populate('assignedStaff', 'name phone')
         .populate('items.product', 'name sku unit')
         .populate('createdBy', 'name')
@@ -51,6 +52,7 @@ exports.getOrder = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const { items, ...orderData } = req.body;
+     delete orderData.orderNumber;
 
     // Calculate total
     const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);

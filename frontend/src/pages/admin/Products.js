@@ -5,7 +5,7 @@ import Modal from '../../components/shared/Modal';
 import toast from 'react-hot-toast';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
 
-const EMPTY = { name: '', sku: '', brand: '', category: '', unit: 'piece', mrp: '', sellingPrice: '', description: '', initialStock: 0 };
+const EMPTY = { name: '', sku: '', brand: '', category: '', unit: 'piece', amount: '',  description: '', initialStock: 0 };
 
 export default function Products() {
   const [products, setProducts] = useState([]); const [brands, setBrands] = useState([]);
@@ -49,8 +49,8 @@ export default function Products() {
     { key: 'brand', label: 'Brand', render: r => r.brand?.name || '—' },
     { key: 'category', label: 'Category' },
     { key: 'unit', label: 'Unit', render: r => <span className="badge badge-gray">{r.unit}</span> },
-    { key: 'mrp', label: 'MRP', render: r => `₹${r.mrp}` },
-    { key: 'sellingPrice', label: 'Selling Price', render: r => <strong>₹{r.sellingPrice}</strong> },
+    { key: 'amount', label: 'Amount', render: r => `₹${r.amount}` },
+
     { key: 'isActive', label: 'Status', render: r => <span className={`badge ${r.isActive ? 'badge-green' : 'badge-red'}`}>{r.isActive ? 'Active' : 'Inactive'}</span> },
   ];
 
@@ -86,8 +86,7 @@ export default function Products() {
           <div className="form-group"><label className="form-label">Brand *</label><select className="form-control form-select" value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })}><option value="">Select Brand</option>{brands.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}</select></div>
           <div className="form-group"><label className="form-label">Category *</label><input className="form-control" list="cats" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="e.g. Beverages" /><datalist id="cats">{categories.map(c => <option key={c} value={c} />)}</datalist></div>
           <div className="form-group"><label className="form-label">Unit</label><select className="form-control form-select" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>{['piece','box','kg','litre','dozen','carton'].map(u => <option key={u} value={u}>{u}</option>)}</select></div>
-          <div className="form-group"><label className="form-label">MRP (₹)</label><input className="form-control" type="number" value={form.mrp} onChange={e => setForm({ ...form, mrp: e.target.value })} /></div>
-          <div className="form-group"><label className="form-label">Selling Price (₹) *</label><input className="form-control" type="number" value={form.sellingPrice} onChange={e => setForm({ ...form, sellingPrice: e.target.value })} /></div>
+          <div className="form-group"><label className="form-label">Amount (₹)</label><input className="form-control" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
           {!editing && <div className="form-group"><label className="form-label">Initial Stock</label><input className="form-control" type="number" min="0" value={form.initialStock} onChange={e => setForm({ ...form, initialStock: Number(e.target.value) })} /></div>}
         </div>
         <div className="form-group"><label className="form-label">Description</label><textarea className="form-control" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
