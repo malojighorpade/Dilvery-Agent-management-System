@@ -6,6 +6,7 @@ import StatusBadge from '../../components/shared/StatusBadge';
 import toast from 'react-hot-toast';
 import { Plus, Search, Eye, UserCheck, Trash2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
+import { storesAPI } from '../../services/api';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -14,7 +15,7 @@ export default function Orders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-
+const [stores, setStores] = useState([]);
   // Modals
   const [createModal, setCreateModal] = useState(false);
   const [viewModal, setViewModal] = useState(null);
@@ -42,6 +43,20 @@ export default function Orders() {
   }, [page, search, statusFilter]);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  useEffect(() => {
+  const fetchStores = async () => {
+    try {
+      const res = await storesAPI.getAll({ isActive: true });
+      setStores(res.data?.data || []);
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to fetch stores");
+    }
+  };
+
+  fetchStores();
+}, []);
 
   useEffect(() => {
     Promise.all([industriesAPI.getAll({ isActive: true }), productsAPI.getAll({ isActive: true }), usersAPI.getStaff()])
@@ -87,7 +102,7 @@ export default function Orders() {
     items[i] = { ...items[i], [field]: val };
     if (field === 'product') {
       const p = products.find(p => p._id === val);
-      if (p) items[i].price = p.sellingPrice;
+      if (p) items[i].price = p.amount;
     }
     return { ...f, items };
   });
@@ -98,6 +113,23 @@ export default function Orders() {
   const columns = [
     { key: 'orderNumber', label: 'Order #', render: r => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{r.orderNumber}</span> },
     { key: 'industry', label: 'Industry', render: r => r.industry?.name || '—' },
+   { 
+  key: 'store', 
+  label: 'Store Name', 
+  render: r => {
+    // ❌ no store at all
+    if (!r.store) return '—';
+
+    // ✅ populated object
+    if (typeof r.store === 'object') {
+      return r.store?.name || '—';
+    }
+
+    // ✅ store is ID → match from stores list
+    const found = stores.find(s => s._id === r.store);
+    return found?.name || '—';
+  }
+},
     { key: 'totalAmount', label: 'Amount', render: r => <span style={{ fontWeight: 600 }}>₹{r.totalAmount?.toLocaleString()}</span> },
     { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
     { key: 'priority', label: 'Priority', render: r => <StatusBadge status={r.priority} /> },
@@ -200,12 +232,36 @@ export default function Orders() {
           <span style={{ fontWeight: 600 }}>Total Amount</span>
           <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>₹{totalAmt.toLocaleString()}</span>
         </div>
+        {/* ✅ NEW STORE NAME DROPDOWN */}
+<div className="form-group" style={{ marginTop: 12 }}>
+  <label className="form-label">Store Name</label>
+  <select
+    className="form-control form-select"
+    value={form.store || ''}
+    onChange={e => setForm({ ...form, store: e.target.value })}
+  >
+    <option value="">Select Store</option>
+
+    {stores.length > 0 ? (
+      stores.map(store => (
+        <option key={store._id} value={store._id}>
+          {store.name} 
+        </option>
+      ))
+    ) : (
+      <option disabled>No stores available</option>
+    )}
+
+  </select>
+</div>
 
         <div className="form-group" style={{ marginTop: 12 }}>
           <label className="form-label">Notes</label>
           <textarea className="form-control" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." />
         </div>
       </Modal>
+
+      
 
       {/* View Order Modal */}
       <Modal open={!!viewModal} onClose={() => setViewModal(null)} title={`Order ${viewModal?.orderNumber}`} size="lg">
