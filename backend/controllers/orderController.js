@@ -12,7 +12,6 @@ exports.getOrders = async (req, res) => {
     if (priority) filter.priority = priority;
     if (search) filter.orderNumber = { $regex: search, $options: 'i' };
 
-    // Staff can only see their assigned orders
     if (req.user.role === 'staff') filter.assignedStaff = req.user._id;
 
     const skip = (page - 1) * limit;
@@ -39,6 +38,7 @@ exports.getOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('industry')
+      .populate('store')
       .populate('assignedStaff', 'name phone email')
       .populate('items.product')
       .populate('createdBy', 'name');
@@ -52,9 +52,8 @@ exports.getOrder = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const { items, ...orderData } = req.body;
-     delete orderData.orderNumber;
+    delete orderData.orderNumber;
 
-    // Calculate total
     const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
     const order = await Order.create({
@@ -64,7 +63,6 @@ exports.createOrder = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // Reserve inventory
     for (const item of items) {
       await Inventory.findOneAndUpdate(
         { product: item.product },
@@ -74,6 +72,7 @@ exports.createOrder = async (req, res) => {
 
     const populated = await order.populate([
       { path: 'industry', select: 'name' },
+      { path: 'store', select: 'name' },
       { path: 'items.product', select: 'name sku' },
     ]);
 
@@ -88,6 +87,7 @@ exports.updateOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
       .populate('industry', 'name')
+      .populate('store', 'name')
       .populate('assignedStaff', 'name phone');
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     req.io?.emit('order:updated', order);
@@ -113,6 +113,7 @@ exports.assignStaff = async (req, res) => {
   }
 };
 
+// ─── KEY FIX: populate store with full address ────────────────────────────────
 exports.getMyOrders = async (req, res) => {
   try {
     const { status } = req.query;
@@ -121,7 +122,9 @@ exports.getMyOrders = async (req, res) => {
     else filter.status = { $in: ['processing', 'dispatched', 'partially_delivered'] };
 
     const orders = await Order.find(filter)
-      .populate('industry', 'name contactPerson phone')
+      .populate('industry', 'name contactPerson phone email address gstin')
+      .populate('store', 'name ownerName phone address route gstin')   // ← FULL store data
+      .populate('assignedStaff', 'name phone')
       .populate('items.product', 'name sku unit image')
       .sort({ deliveryDate: 1 });
 

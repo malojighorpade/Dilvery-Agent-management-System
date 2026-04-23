@@ -9,56 +9,36 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    orderNumber: {
-      type: String,
-      unique: true,
-      required: true,
-      default: () =>
-        "ORD-" +
-        Date.now() +
-        "-" +
-        Math.floor(Math.random() * 1000),
-    },
-
+    orderNumber: { type: String, unique: true },
     industry: { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true },
 
+    // ─── ADDED: delivery destination store ────────────────────────────────────
     store: { type: mongoose.Schema.Types.ObjectId, ref: 'Store' },
 
     items: [orderItemSchema],
-
     totalAmount: { type: Number, required: true },
-
     status: {
       type: String,
-      enum: [
-        'pending',
-        'processing',
-        'dispatched',
-        'partially_delivered',
-        'delivered',
-        'cancelled',
-      ],
+      enum: ['pending', 'processing', 'dispatched', 'partially_delivered', 'delivered', 'cancelled'],
       default: 'pending',
     },
-
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
     deliveryDate: { type: Date },
-
     deliveredAt: { type: Date },
-
     notes: { type: String },
-
-    priority: {
-      type: String,
-      enum: ['low', 'normal', 'high', 'urgent'],
-      default: 'normal',
-    },
-
+    priority: { type: String, enum: ['low', 'normal', 'high', 'urgent'], default: 'normal' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );
 
-// ✅ THIS WAS MISSING
+// Auto-generate order number
+orderSchema.pre('save', async function (next) {
+  if (!this.orderNumber) {
+    const count = await mongoose.model('Order').countDocuments();
+    this.orderNumber = `ORD-${String(count + 1).padStart(5, '0')}`;
+  }
+  next();
+});
+
 module.exports = mongoose.model('Order', orderSchema);
