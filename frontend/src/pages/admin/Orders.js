@@ -113,7 +113,6 @@ const [stores, setStores] = useState([]);
   const columns = [
     { key: 'orderNumber', label: 'Order #', render: r => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{r.orderNumber}</span> },
     { key: 'industry', label: 'Industry', render: r => r.industry?.name || '—' },
-    { key: 'storename', label: 'Store Name', render: r => r.store?.name || '—' },
     { key: 'totalAmount', label: 'Amount', render: r => <span style={{ fontWeight: 600 }}>₹{r.totalAmount?.toLocaleString()}</span> },
     { key: 'status', label: 'Status', render: r => <StatusBadge status={r.status} /> },
     { key: 'priority', label: 'Priority', render: r => <StatusBadge status={r.priority} /> },
