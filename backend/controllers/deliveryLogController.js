@@ -158,7 +158,26 @@ exports.uploadProof = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+exports.getByOrder = async (req, res) => {
+  try {
+    const log = await DeliveryLog.findOne({ order: req.params.orderId })
+      .populate('store', 'name address phone')
+      .populate('order', 'orderNumber totalAmount')
+      .populate('deliveryStaff', 'name phone')
+      .populate('items.product', 'name sku');
 
+    res.json({
+      success: true,
+      data: log
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
 exports.getMyDeliveries = async (req, res) => {
   try {
     const { status, date } = req.query;

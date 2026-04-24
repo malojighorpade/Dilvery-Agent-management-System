@@ -72,7 +72,7 @@ exports.createUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || "staff",
+      role: role || "delivery agent",
       phone,
       isActive: true
     });
@@ -153,11 +153,11 @@ exports.deleteUser = async (req, res) => {
 };
 
 // =====================================
-// ✅ STAFF LIST
+// ✅ DELIVERY AGENT LIST
 // =====================================
 exports.getStaffList = async (req, res) => {
   try {
-    const staff = await User.find({ role: 'staff', isActive: true }).select('name email phone');
+    const staff = await User.find({ role: 'delivery agent', isActive: true }).select('name email phone');
     res.json({ success: true, data: staff });
 
   } catch (err) {

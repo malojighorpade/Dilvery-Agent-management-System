@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+
 // Auth
 import Register from './pages/Register';
 import Login from './pages/Login';
@@ -115,6 +116,8 @@ function AppRoutes() {
         <Route path="deliveries/:id" element={<DeliveryDetail />} />
         <Route path="attendance" element={<StaffAttendance />} />
         <Route path="payments" element={<StaffPayments />} />
+    
+<Route path="deliveries/:id" element={<DeliveryDetail />} />
       </Route>
 
       {/* Default */}

@@ -19,38 +19,148 @@ function PaymentModeSelector({ order, onBack, onSelectMode }) {
     { key: 'cheque', label: 'Cheque',       icon: FileCheck, color: '#d97706', bg: '#fffbeb', border: '#fcd34d', desc: 'Post-dated cheque' },
   ];
   return (
-    <div style={{ padding: 16 }}>
-      <button onClick={onBack} style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', marginBottom: 20, padding: 0 }}>
-        <ArrowLeft size={16} /> Back to Invoice
-      </button>
-      <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 4 }}>Select Payment Mode</h2>
-      <p style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginBottom: 20 }}>
-        Order <strong style={{ color: 'var(--primary)' }}>{order.orderNumber}</strong> — ₹{order.totalAmount?.toLocaleString()}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
-        {modes.map(({ key, label, icon: Icon, color, bg, border, desc }) => (
-          <button key={key} onClick={() => setSelected(key)}
-            style={{ background: selected === key ? bg : 'white', border: `2px solid ${selected === key ? color : 'var(--gray-200)'}`, borderRadius: 14, padding: '16px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, transition: 'all 0.2s' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: selected === key ? color : 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
-              <Icon size={22} color={selected === key ? 'white' : 'var(--gray-400)'} />
+  <div style={{
+    padding: 16,
+    paddingBottom: 100,
+    maxWidth: 480,
+    margin: '0 auto'
+  }}>
+
+    {/* Back */}
+    <button
+      onClick={onBack}
+      style={{
+        background: 'none',
+        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        color: 'var(--primary)',
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        cursor: 'pointer',
+        marginBottom: 20
+      }}
+    >
+      <ArrowLeft size={16} /> Back to Invoice
+    </button>
+
+    {/* Title */}
+    <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+      Select Payment Mode
+    </h2>
+
+    <p style={{
+      fontSize: '0.8rem',
+      color: 'var(--gray-500)',
+      marginBottom: 20
+    }}>
+      Order <strong style={{ color: 'var(--primary)' }}>
+        {order.orderNumber}
+      </strong> — ₹{order.totalAmount?.toLocaleString()}
+    </p>
+
+    {/* Modes */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
+      marginBottom: 24
+    }}>
+      {modes.map(({ key, label, icon: Icon, color, bg, desc }) => (
+        <button
+          key={key}
+          onClick={() => setSelected(key)}
+          style={{
+            background: selected === key ? bg : 'white',
+            border: `2px solid ${selected === key ? color : '#e5e7eb'}`,
+            borderRadius: 14,
+            padding: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            background: selected === key ? color : '#f3f4f6',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Icon size={22} color={selected === key ? 'white' : '#9ca3af'} />
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              color: selected === key ? color : '#111827'
+            }}>
+              {label}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: selected === key ? color : 'var(--gray-800)' }}>{label}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: 2 }}>{desc}</div>
+            <div style={{
+              fontSize: '0.75rem',
+              color: '#6b7280'
+            }}>
+              {desc}
             </div>
-            {selected === key && (
-              <div style={{ width: 22, height: 22, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
-      <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', borderRadius: 14, fontSize: '1rem', opacity: selected ? 1 : 0.45 }} disabled={!selected} onClick={() => onSelectMode(selected)}>
-        <CreditCard size={18} /> Proceed to Collect Payment
+          </div>
+
+          {selected === key && (
+            <div style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              background: color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              ✓
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+
+    {/* Sticky Bottom Button */}
+    <div style={{
+  position: 'sticky',
+  bottom: 60,   // 🔥 FIX
+  width: '100%',
+  background: 'white',
+  borderTop: '1px solid var(--gray-200)',
+  padding: '14px 16px',
+  boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+  zIndex: 10,
+  display: 'flex',
+  gap: 10
+}}>
+      <button
+        disabled={!selected}
+        onClick={() => onSelectMode(selected)}
+        style={{
+          width: '100%',
+          padding: 14,
+          borderRadius: 14,
+          fontSize: '1rem',
+          fontWeight: 600,
+          background: selected ? 'var(--primary)' : '#9ca3af',
+          color: 'white',
+          border: 'none',
+          cursor: selected ? 'pointer' : 'not-allowed'
+        }}
+      >
+        💳 Proceed to Collect Payment
       </button>
     </div>
-  );
+
+  </div>
+);
 }
 
 // ── Order Invoice View (INLINE — never navigates to /deliveries/:id) ──────────
@@ -165,11 +275,72 @@ function OrderInvoiceView({ order, onBack }) {
       </div>
 
       {/* Payment CTA */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'white', borderTop: '1px solid var(--gray-200)', padding: '14px 16px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
-        <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', borderRadius: 14, fontSize: '1rem' }} onClick={() => setShowPayment(true)}>
-          <CreditCard size={18} /> Select Payment Mode
-        </button>
-      </div>
+      {/* Bottom Actions */}
+<div style={{
+  position: 'fixed',
+  bottom: 0,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  width: '100%',
+  maxWidth: 480,
+  background: 'white',
+  borderTop: '1px solid var(--gray-200)',
+  padding: '14px 16px',
+  boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+  zIndex: 999,
+  display: 'flex',
+  gap: 10
+}}>
+
+  {/* Start Delivery */}
+  <button
+    onClick={async () => {
+      try {
+        const existing = await deliveryAPI.getByOrder(order._id);
+
+        if (existing?.data?.data) {
+          navigate(`/staff/deliveries/${existing.data.data._id}`);
+          return;
+        }
+
+        const res = await deliveryAPI.create({
+          order: order._id,
+          store: typeof order.store === 'object'
+    ? order.store._id
+    : order.store,
+         
+          status: 'pending', // can be assigned later by manager
+          items: order.items.map(i => ({
+            product: i.product?._id,
+            orderedQty: i.quantity,
+            deliveredQty: 0,
+          })),
+        });
+        console.log("ITEMS 👉", order.items);
+
+        navigate(`/staff/deliveries/${res.data.data._id}`);
+      } catch (e) {
+        console.error(e);
+        console.log("DELIVERY ERROR 👉", e.response?.data);
+        toast.error('Failed to start delivery');
+        
+      }
+    }}
+    className="btn btn-success"
+    style={{ flex: 1, borderRadius: 14 }}
+  >
+    Start Delivery
+  </button>
+
+  {/* Payment */}
+  <button
+    className="btn btn-primary btn-lg"
+    style={{ flex: 1, justifyContent: 'center', borderRadius: 14 }}
+    onClick={() => setShowPayment(true)}
+  >
+    <CreditCard size={18} /> Payment
+  </button>
+</div>
     </div>
   );
 }
@@ -198,7 +369,7 @@ export default function MyDeliveries() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: 16 ,paddingBottom: 280 }}>
       <h1 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>My Deliveries</h1>
 
       {/* Tabs */}

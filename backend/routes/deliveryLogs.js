@@ -1,14 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/deliveryLogController');
-const { protect, adminOnly } = require('../middleware/auth');
+
+const deliveryLogController = require('../controllers/deliveryLogController');
+const { protect } = require('../middleware/auth');
 const { upload } = require('../config/cloudinary');
 
+// Protect all routes
 router.use(protect);
-router.get('/my', ctrl.getMyDeliveries);
-router.get('/', ctrl.getDeliveryLogs);
-router.post('/', ctrl.createDeliveryLog);
-router.get('/:id', ctrl.getDeliveryLog);
-router.put('/:id/status', ctrl.updateDeliveryStatus);
-router.post('/:id/proof', upload.single('proof'), ctrl.uploadProof);
+
+// ✅ ADD THIS (IMPORTANT)
+router.get('/my', deliveryLogController.getMyDeliveries);
+router.get('/order/:orderId', deliveryLogController.getByOrder);
+
+// Existing routes
+router.get('/', deliveryLogController.getDeliveryLogs);
+router.post('/', deliveryLogController.createDeliveryLog);
+router.get('/:id', deliveryLogController.getDeliveryLog);
+router.put('/:id/status', deliveryLogController.updateDeliveryStatus);
+router.post('/:id/proof', upload.single('proof'), deliveryLogController.uploadProof);
+
 module.exports = router;

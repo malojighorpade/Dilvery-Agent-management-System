@@ -101,17 +101,13 @@ export const ordersAPI = {
 export const invoicesAPI = {
   getAll: (params) => API.get('/invoices', { params }),
   getOne: (id) => API.get(`/invoices/${id}`),
-  create: (data) => API.post('/invoices', data),
-  update: (id, data) => API.put(`/invoices/${id}`, data),
-  markPaid: (id) => API.put(`/invoices/${id}/mark-paid`),
-  delete: (id) => API.delete(`/invoices/${id}`),
+  markPaid: (id) => API.put(`/invoices/${id}/mark-paid`, {}),
 };
-
 // Payments
 export const paymentsAPI = {
   getAll: (params) => API.get('/payments', { params }),
   getOne: (id) => API.get(`/payments/${id}`),
-  create: (data) => API.post('/payments', data),      // data can include deliveryLogId
+  create: (data) => API.post('/payments', data),  // Passes deliveryLogId, transactionId, etc
   getSummary: (params) => API.get('/payments/summary', { params }),
 };
 
@@ -132,6 +128,10 @@ export const deliveryAPI = {
   getAll: (params) => API.get('/delivery-logs', { params }),
   getOne: (id) => API.get(`/delivery-logs/${id}`),
   create: (data) => API.post('/delivery-logs', data),
+  getByOrder: (orderId) => 
+  axios.get(`/delivery-logs/order/${orderId}`),
+  
+  update: (id, data) => API.put(`/delivery-logs/${id}`, data),
   updateStatus: (id, data) => API.put(`/delivery-logs/${id}/status`, data),
   uploadProof: (id, formData) => API.post(`/delivery-logs/${id}/proof`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
