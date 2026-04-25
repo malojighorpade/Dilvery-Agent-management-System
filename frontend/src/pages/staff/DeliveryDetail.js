@@ -489,6 +489,7 @@ export default function DeliveryDetail() {
         paymentMode: 'online',
         transactionId,
         upiId: upiId || undefined,
+        deliveryId: log._id,
       });
       // Update delivery log payment status
       await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'online' });
@@ -507,6 +508,7 @@ export default function DeliveryDetail() {
         amount: collectedAmount,
         paymentMode: 'cash',
         cashDenominations,
+        deliveryId: log._id,
       });
       await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'cash' });
       toast.success('Cash payment recorded!');
@@ -535,6 +537,7 @@ export default function DeliveryDetail() {
         bankName: chequeData.bankName,
         chequeDate: chequeData.chequeDate,
         chequePhotoUrl,
+        deliveryId: log._id,
       });
       await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'cheque' });
       toast.success('Cheque recorded & photo saved!');

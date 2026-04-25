@@ -119,7 +119,10 @@ exports.getMyOrders = async (req, res) => {
     const { status } = req.query;
     const filter = { assignedStaff: req.user._id };
     if (status) filter.status = status;
-    else filter.status = { $in: ['processing', 'dispatched', 'partially_delivered'] };
+   else filter.status = {
+  $in: ['processing', 'dispatched', 'partially_delivered']
+};
+// already excludes delivered & completed ✅
 
     const orders = await Order.find(filter)
       .populate('industry', 'name contactPerson phone email address gstin')

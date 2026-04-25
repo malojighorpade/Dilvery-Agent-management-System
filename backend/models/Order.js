@@ -19,7 +19,7 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'dispatched', 'partially_delivered', 'delivered', 'cancelled'],
+      enum: ['pending', 'processing', 'dispatched', 'partially_delivered', 'delivered', 'completed', 'cancelled'],
       default: 'pending',
     },
     assignedStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

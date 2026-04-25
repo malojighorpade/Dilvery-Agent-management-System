@@ -87,7 +87,8 @@ const storeDoc = await Store.findById(store);
         payment: payment._id,
         paymentCollected: true,
         paymentMode,
-        status: 'completed',
+        
+        
       });
     }
 
