@@ -4,12 +4,12 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
@@ -18,11 +18,15 @@ const io = new Server(server, {
 });
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Make io accessible in routes
+// Socket access
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -45,9 +49,11 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date() });
+});
 
-// Socket.io events
+// Socket
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
@@ -59,17 +65,13 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
   });
 });
-// Serve frontend (only for production build)
-app.use(express.static(path.join(__dirname, '../frontend/build')));
 
-// Catch all routes → React handles
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
-});
+// ❌ REMOVED THIS (IMPORTANT)
+// app.use(express.static(...))
+// app.get('*', ...)
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
+// MongoDB
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
     server.listen(process.env.PORT || 5000, () => {

@@ -47,6 +47,7 @@ console.log("STORE 👉", order?.store);
         paymentMode: payForm.paymentMode,
         transactionId: payForm.transactionId || undefined,
         deliveryLogId: order.deliveryLogId || undefined, // Link payment to delivery log for backend processing
+        orderId: order?._id || undefined, // Link order directly
         upiId: payForm.upiId || undefined,
         chequeNumber: payForm.chequeNumber || undefined,
         bankName: payForm.bankName || undefined,
@@ -75,7 +76,7 @@ console.log("STORE 👉", order?.store);
         </p>
         <p style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginBottom: 28 }}>Order {order?.orderNumber}</p>
         <button className="btn btn-primary btn-lg" style={{ justifyContent: 'center', borderRadius: 12 }} onClick={onDone}>
-          Back to Orders
+          Back to Delivery Logs
         </button>
       </div>
     );
@@ -259,7 +260,7 @@ export default function StaffPayments() {
         onDone={() => {
           setCollectMode(false);
           setCollectOrder(null);
-          navigate('/staff/payments', { replace: true, state: {} });
+          navigate('/staff/deliveries', { replace: true, state: { tab: 'deliveries' } });
         }}
         onBack={() => {
           setCollectMode(false);

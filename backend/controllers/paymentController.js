@@ -59,6 +59,7 @@ exports.createPayment = async (req, res) => {
       cashDenominations,
       notes,
       deliveryLogId,    // ← Pass from frontend
+      orderId,          // ← Direct order link
     } = req.body;
 const storeDoc = await Store.findById(store);
     // Create payment
@@ -81,65 +82,109 @@ const storeDoc = await Store.findById(store);
       status: 'completed',
     });
 
+    let dLogId = deliveryLogId;
+
+    if (!dLogId && orderId) {
+      const existingLog = await DeliveryLog.findOne({ order: orderId });
+      if (existingLog) {
+        dLogId = existingLog._id;
+      } else {
+        const orderForLog = await Order.findById(orderId);
+        if (orderForLog) {
+          const newLog = await DeliveryLog.create({
+            order: orderForLog._id,
+            store: store,
+            deliveryStaff: req.user._id,
+            status: 'completed',
+            items: orderForLog.items.map(i => ({
+              product: i.product,
+              orderedQty: i.quantity,
+              deliveredQty: i.quantity
+            })),
+            payment: payment._id,
+            paymentCollected: true,
+            paymentMode,
+            deliveredAt: new Date()
+          });
+          dLogId = newLog._id;
+        }
+      }
+    }
+
     // Link to delivery log
-    if (deliveryLogId) {
-      await DeliveryLog.findByIdAndUpdate(deliveryLogId, {
+    if (dLogId) {
+      await DeliveryLog.findByIdAndUpdate(dLogId, {
         payment: payment._id,
         paymentCollected: true,
         paymentMode,
-        
-        
+        status: 'completed',
       });
     }
 
     // Get delivery log to find order
-    const deliveryLog = await DeliveryLog.findById(deliveryLogId).populate('order');
-    const order = deliveryLog?.order;
+    const deliveryLog = dLogId ? await DeliveryLog.findById(dLogId).populate('order') : null;
+    const order = deliveryLog?.order || (orderId ? await Order.findById(orderId) : null);
 
     // Auto-generate invoice
-    if (order && deliveryLog) {
-      const existingInvoice = await Invoice.findOne({ order: order._id });
+    if (order) {
+      let invoice = await Invoice.findOne({ order: order._id });
       
-      if (!existingInvoice) {
-        const orderDoc = await Order.findById(order._id)
-          .populate('industry', 'name contactPerson phone address gstin')
-          .populate('store', 'name ownerName phone address gstin')
-          .populate('items.product', 'name sku');
+      const orderDoc = await Order.findById(order._id)
+        .populate('industry', 'name contactPerson phone address gstin')
+        .populate('store', 'name ownerName phone address gstin')
+        .populate('items.product', 'name sku');
 
-        if (orderDoc) {
-          const subtotal = orderDoc.items.reduce((s, i) => s + i.quantity * i.price, 0);
-          const taxRate = 18;
-          const taxAmount = Math.round(subtotal * taxRate / 100);
-          const totalAmount = subtotal + taxAmount;
+      if (!invoice && orderDoc) {
+        const subtotal = orderDoc.items.reduce((s, i) => s + i.quantity * i.price, 0);
+        const taxRate = 18;
+        const taxAmount = Math.round(subtotal * taxRate / 100);
+        const totalAmount = subtotal + taxAmount;
 
-          const invoice = await Invoice.create({
-            invoiceNumber: `INV-${Date.now()}`,
-            order: orderDoc._id,
-            store: orderDoc.store?._id,
-            industry: orderDoc.industry?._id,
-            items: orderDoc.items.map(i => ({
-              product: i.product?._id,
-              productName: i.product?.name,
-              quantity: i.quantity,
-              price: i.price,
-              total: i.quantity * i.price,
-            })),
-            subtotal,
-            taxRate,
-            taxAmount,
-            totalAmount,
-            status: 'sent',
-            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            createdBy: req.user._id,
+        invoice = await Invoice.create({
+          invoiceNumber: `INV-${Date.now()}`,
+          order: orderDoc._id,
+          store: orderDoc.store?._id,
+          industry: orderDoc.industry?._id,
+          items: orderDoc.items.map(i => ({
+            product: i.product?._id,
+            productName: i.product?.name,
+            quantity: i.quantity,
+            price: i.price,
+            total: i.quantity * i.price,
+          })),
+          subtotal,
+          taxRate,
+          taxAmount,
+          totalAmount,
+          status: 'sent',
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          createdBy: req.user._id,
+        });
+      }
+
+      if (invoice) {
+        payment.invoice = invoice._id;
+        await payment.save();
+      }
+
+      if (orderDoc) {
+        if (deliveryLog) {
+          orderDoc.items.forEach(orderItem => {
+            const dItem = deliveryLog.items.find(
+              (i) => i.product.toString() === (orderItem.product._id ? orderItem.product._id.toString() : orderItem.product.toString())
+            );
+            if (dItem) {
+              orderItem.deliveredQuantity = dItem.deliveredQty;
+            }
           });
-
-          // Link invoice to payment
-          payment.invoice = invoice._id;
-          await payment.save();
-
-          // Update order status
-          await Order.findByIdAndUpdate(order._id, { status: 'completed' });
+        } else {
+          // If no delivery log (fallback), assume full delivery
+          orderDoc.items.forEach(orderItem => {
+            orderItem.deliveredQuantity = orderItem.quantity;
+          });
         }
+        orderDoc.status = 'completed';
+        await orderDoc.save();
       }
     }
 

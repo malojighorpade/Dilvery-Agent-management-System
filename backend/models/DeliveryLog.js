@@ -7,7 +7,7 @@ const deliveryLogSchema = new mongoose.Schema(
     deliveryStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: {
       type: String,
-      enum: ['pending', 'in_transit', 'arrived', 'delivered', 'failed', 'partial'],
+      enum: ['pending', 'in_transit', 'arrived', 'delivered', 'failed', 'partial', 'completed'],
       default: 'pending',
     },
     items: [

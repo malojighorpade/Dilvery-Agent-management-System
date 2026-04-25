@@ -201,7 +201,11 @@ function CashModal({ amount, store, onConfirm, onClose }) {
         </div>
 
         <button
-          onClick={() => { if (total <= 0) return toast.error('Enter cash denominations'); onConfirm({ cashDenominations: denoms, collectedAmount: total }); }}
+          onClick={() => { 
+            if (total <= 0) return toast.error('Enter cash denominations'); 
+            if (total !== Number(amount)) return toast.error('Make full payment');
+            onConfirm({ cashDenominations: denoms, collectedAmount: total }); 
+          }}
           className="btn btn-success btn-lg"
           style={{ width: '100%', justifyContent: 'center', borderRadius: 12 }}
         >
@@ -489,10 +493,11 @@ export default function DeliveryDetail() {
         paymentMode: 'online',
         transactionId,
         upiId: upiId || undefined,
-        deliveryId: log._id,
+        deliveryLogId: log._id,
+        orderId: log.order?._id,
       });
       // Update delivery log payment status
-      await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'online' });
+      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'online' });
       toast.success('Online payment recorded!');
       setModal(null);
       fetchLog();
@@ -508,9 +513,10 @@ export default function DeliveryDetail() {
         amount: collectedAmount,
         paymentMode: 'cash',
         cashDenominations,
-        deliveryId: log._id,
+        deliveryLogId: log._id,
+        orderId: log.order?._id,
       });
-      await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'cash' });
+      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'cash' });
       toast.success('Cash payment recorded!');
       setModal(null);
       fetchLog();
@@ -537,9 +543,10 @@ export default function DeliveryDetail() {
         bankName: chequeData.bankName,
         chequeDate: chequeData.chequeDate,
         chequePhotoUrl,
-        deliveryId: log._id,
+        deliveryLogId: log._id,
+        orderId: log.order?._id,
       });
-      await deliveryAPI.updateStatus(id, { status: log.status, paymentCollected: true, paymentMode: 'cheque' });
+      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'cheque' });
       toast.success('Cheque recorded & photo saved!');
       setModal(null);
       fetchLog();

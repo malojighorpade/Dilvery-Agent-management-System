@@ -10,7 +10,7 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { deliveryAPI, ordersAPI } from '../../services/api';
 import StatusBadge from '../../components/shared/StatusBadge';
 import toast from 'react-hot-toast';
@@ -343,14 +343,7 @@ function OrderInvoiceView({ order, onBack }) {
     Start Delivery
   </button>
 
-  {/* Payment */}
-  <button
-    className="btn btn-primary btn-lg"
-    style={{ flex: 1, justifyContent: 'center', borderRadius: 14 }}
-    onClick={() => setShowPayment(true)}
-  >
-    <CreditCard size={18} /> Payment
-  </button>
+
 </div>
     </div>
   );
@@ -361,7 +354,8 @@ export default function MyDeliveries() {
   const [deliveries, setDeliveries] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('orders');
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.tab || 'orders');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
 
