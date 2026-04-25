@@ -59,7 +59,7 @@ exports.createDeliveryLog = async (req, res) => {
 
 exports.updateDeliveryStatus = async (req, res) => {
   try {
-    const { status, items, receiverName, notes, latitude, longitude, paymentCollected, paymentMode } = req.body;
+    const { status, items, receiverName, notes, latitude, longitude, paymentCollected, paymentMode ,proofOfDelivery} = req.body;
     const log = await DeliveryLog.findById(req.params.id).populate('order').populate('store');
     if (!log) return res.status(404).json({ success: false, message: 'Delivery log not found' });
 
@@ -82,8 +82,8 @@ exports.updateDeliveryStatus = async (req, res) => {
       for (const item of deliveryItems) {
         if (item.deliveredQty > 0) {
           await Inventory.findOneAndUpdate(
-            { product: item.product || item.product?._id },
-            { $inc: { currentStock: -item.deliveredQty, reservedStock: -item.orderedQty } }
+            {product: item.product?._id || item.product },
+            { $inc: { currentStock: -item.deliveredQty, reservedStock: -item.deliveredQty } }
           );
         }
       }

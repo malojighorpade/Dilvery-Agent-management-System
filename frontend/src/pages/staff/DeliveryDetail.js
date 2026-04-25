@@ -53,7 +53,7 @@ function QRScannerModal({ amount, store, onConfirm, onClose }) {
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--gray-700)' }}>Show this QR to the store owner</span>
               </div>
               <div style={{ background: 'white', border: '3px solid var(--primary)', borderRadius: 16, padding: 12, display: 'inline-block', boxShadow: '0 4px 20px rgba(37,99,235,0.2)' }}>
-                <img src={qrUrl} alt="UPI QR" width={200} height={200} style={{ display: 'block' }} onError={e => e.target.style.display='none'} />
+                <img src={qrUrl} alt="UPI QR" width={200} height={200} style={{ display: 'block' }} onError={e => e.target.style.display = 'none'} />
                 <div style={{ marginTop: 8, fontSize: '0.7rem', color: 'var(--gray-500)' }}>Scan with any UPI app</div>
               </div>
 
@@ -201,10 +201,10 @@ function CashModal({ amount, store, onConfirm, onClose }) {
         </div>
 
         <button
-          onClick={() => { 
-            if (total <= 0) return toast.error('Enter cash denominations'); 
+          onClick={() => {
+            if (total <= 0) return toast.error('Enter cash denominations');
             if (total !== Number(amount)) return toast.error('Make full payment');
-            onConfirm({ cashDenominations: denoms, collectedAmount: total }); 
+            onConfirm({ cashDenominations: denoms, collectedAmount: total });
           }}
           className="btn btn-success btn-lg"
           style={{ width: '100%', justifyContent: 'center', borderRadius: 12 }}
@@ -224,30 +224,68 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
   const [cameraMode, setCameraMode] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+ const startCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCameraMode(true);
-    } catch { toast.error('Camera access denied'); }
-  };
+    streamRef.current = stream;
 
+    if (videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = stream;
+
+      video.onloadedmetadata = () => {
+        video.play();
+      };
+    }
+
+    setCameraMode(true);
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Camera error");
+  }
+};
   const capturePhoto = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
-    canvas.toBlob(blob => {
-      const file = new File([blob], 'cheque.jpg', { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      setChequeData(d => ({ ...d, photo: file, photoPreview: url }));
-      stopCamera();
-      toast.success('Cheque photo captured!');
-    }, 'image/jpeg', 0.9);
-  };
+  const video = videoRef.current;
 
+  if (!video || video.readyState < 2) {
+    toast.error("Camera still loading...");
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      toast.error("Failed to capture image");
+      return;
+    }
+
+    const file = new File([blob], 'cheque.jpg', { type: 'image/jpeg' });
+    const url = URL.createObjectURL(file);
+
+    setChequeData(d => ({
+      ...d,
+      photo: file,
+      photoPreview: url
+    }));
+
+    // stop camera
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    setCameraMode(false);
+
+    toast.success("Cheque photo captured!");
+  }, 'image/jpeg', 0.9);
+};
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     setCameraMode(false);
@@ -276,9 +314,19 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
         {/* Camera view */}
         {cameraMode ? (
           <div style={{ marginBottom: 16 }}>
-            <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: 250, objectFit: 'cover' }} />
+            <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: 250, objectFit: 'cover' }} />
             <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-              <button onClick={stopCamera} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 10 }}><X size={16} /> Cancel</button>
+             <button
+  type="button"
+  onClick={() => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    setCameraMode(false);
+  }}
+  className="btn btn-secondary"
+  style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}
+>
+  <X size={14} /> Cancel
+</button>
               <button onClick={capturePhoto} className="btn btn-primary" style={{ flex: 2, justifyContent: 'center', borderRadius: 10, background: '#dc2626' }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#dc2626' }} />
@@ -355,29 +403,75 @@ function DeliveryCompleteModal({ log, onConfirm, onClose }) {
   const [receiverName, setReceiverName] = useState('');
   const [items, setItems] = useState(log?.items?.map(i => ({ ...i, deliveredQty: i.deliveredQty || i.orderedQty })) || []);
   const [saving, setSaving] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCameraActive(true);
-    } catch { toast.error('Camera denied — you can skip the photo'); }
-  };
+const startCamera = async () => {
+  try {
+    setIsCameraReady(false); // ✅ add this
 
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
+
+    streamRef.current = stream;
+
+    if (videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = stream;
+
+      await video.play();
+      video.onloadedmetadata = () => {
+  video.play();
+  setIsCameraReady(true); // ✅ accurate trigger
+};
+
+    }
+
+    setCameraActive(true); // ✅ keep this
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Camera error");
+  }
+};
   const captureProof = () => {
+    console.log("Capture clicked");
+
+    if (!isCameraReady) {
+      toast.error("Camera still loading...");
+      return;
+    }
+
+    const video = videoRef.current;
+
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
-    canvas.toBlob(blob => {
-      setProofPhoto(new File([blob], 'proof.jpg', { type: 'image/jpeg' }));
-      setProofPreview(URL.createObjectURL(blob));
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        toast.error("Capture failed");
+        return;
+      }
+
+      const file = new File([blob], 'proof.jpg', { type: 'image/jpeg' });
+      const url = URL.createObjectURL(file);
+
+      setProofPhoto(file);
+      setProofPreview(url);
+
       streamRef.current?.getTracks().forEach(t => t.stop());
       setCameraActive(false);
-      toast.success('Proof photo captured!');
-    }, 'image/jpeg', 0.85);
+  setIsCameraReady(false); 
+
+      toast.success("Photo captured!");
+    }, 'image/jpeg', 0.9);
   };
+
 
   useEffect(() => () => streamRef.current?.getTracks().forEach(t => t.stop()), []);
 
@@ -421,9 +515,22 @@ function DeliveryCompleteModal({ log, onConfirm, onClose }) {
             <div>
               <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: 10, background: '#000', maxHeight: 220, objectFit: 'cover' }} />
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setCameraActive(false); }} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}><X size={14} /> Cancel</button>
-                <button onClick={captureProof} className="btn" style={{ flex: 2, justifyContent: 'center', borderRadius: 8, background: '#dc2626', color: 'white', border: 'none' }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#dc2626' }} /></div>
+                <button type="button" onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setCameraActive(false); 
+setIsCameraReady(false); }} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}><X size={14} /> Cancel</button>
+                <button
+                  type="button"
+                  disabled={!isCameraReady}
+                  onClick={captureProof}
+                  className="btn"
+                  style={{
+                    flex: 2,
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    background: isCameraReady ? '#dc2626' : '#9ca3af',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
                   Capture
                 </button>
               </div>
@@ -460,28 +567,28 @@ export default function DeliveryDetail() {
   const [modal, setModal] = useState(null); // 'cash' | 'online' | 'cheque' | 'complete'
   const [saving, setSaving] = useState(false);
 
- const fetchLog = async () => {
-  if (!id || id === "undefined") return;
+  const fetchLog = async () => {
+    if (!id || id === "undefined") return;
 
-  try {
-    const r = await deliveryAPI.getOne(id);
-    setLog(r.data.data);
-  } catch {
-    toast.error('Failed to load delivery');
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      const r = await deliveryAPI.getOne(id);
+      setLog(r.data.data);
+    } catch {
+      toast.error('Failed to load delivery');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-  if (!id || id === "undefined") {
-    toast.error("Invalid delivery ID");
-    setLoading(false);
-    return;
-  }
+    if (!id || id === "undefined") {
+      toast.error("Invalid delivery ID");
+      setLoading(false);
+      return;
+    }
 
-  fetchLog();
-}, [id]);
+    fetchLog();
+  }, [id]);
 
   // ── Payment handlers ─────────────────────────────────────────
   const handleOnlinePayment = async ({ transactionId, upiId }) => {
@@ -525,13 +632,17 @@ export default function DeliveryDetail() {
     setSaving(true);
     try {
       // Upload cheque photo if taken
-      let chequePhotoUrl = null;
-      if (chequeData.photo) {
-        const fd = new FormData();
-        fd.append('proof', chequeData.photo);
-        const res = await deliveryAPI.uploadProof(id, fd);
-        chequePhotoUrl = res.data.imageUrl;
-      }
+      // Upload proof photo if taken
+      let proofUrl = null;
+
+if (chequeData.photo) {
+  const fd = new FormData();
+  fd.append('image', chequeData.photo);
+
+  const res = await deliveryAPI.uploadProof(id, fd);
+  proofUrl = res.data.imageUrl;
+}
+
       await paymentsAPI.create({
         store: log.store?._id,
         amount: log.order?.totalAmount || 0,
@@ -539,7 +650,7 @@ export default function DeliveryDetail() {
         chequeNumber: chequeData.chequeNumber,
         bankName: chequeData.bankName,
         chequeDate: chequeData.chequeDate,
-        chequePhotoUrl,
+        proofOfDelivery: proofUrl ,
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
@@ -551,45 +662,65 @@ export default function DeliveryDetail() {
   };
 
   // ── Delivery complete handler ────────────────────────────────
-  const handleDeliveryComplete = async ({ items, receiverName, proofPhoto }) => {
-    setSaving(true);
-    try {
-      // Get geo location
-      const pos = await new Promise((res, rej) => navigator.geolocation?.getCurrentPosition(res, rej, { timeout: 5000 })).catch(() => null);
+ const handleDeliveryComplete = async ({ items, receiverName, proofPhoto }) => {
+  if (!log.payment) {
+    toast.error("Collect payment first");
+    return;
+  }
 
-      // Upload proof photo if taken
-      if (proofPhoto) {
-        const fd = new FormData();
-        fd.append('proof', proofPhoto);
-        await deliveryAPI.uploadProof(id, fd);
-      }
+  setSaving(true);
 
-      // Update delivery status to delivered
-      await deliveryAPI.updateStatus(id, {
+  try {
+    // Get geo location
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation?.getCurrentPosition(res, rej, { timeout: 5000 })
+    ).catch(() => null);
+
+    // Upload proof photo if taken
+    let proofUrl = null;
+
+    if (proofPhoto) {
+      const fd = new FormData();
+      fd.append('image', proofPhoto);
+
+      const res = await deliveryAPI.uploadProof(id, fd);
+      proofUrl = res.data.imageUrl;
+    }
+
+    // Update delivery
+    await deliveryAPI.updateStatus(id, {
+      status: 'delivered',
+      items,
+      receiverName,
+      ...(proofUrl && { proofOfDelivery: proofUrl }), // cleaner
+      latitude: pos?.coords?.latitude,
+      longitude: pos?.coords?.longitude
+    });
+
+    // Update order
+    if (log.order?._id) {
+      await ordersAPI.update(log.order._id, {
         status: 'delivered',
-        items,
-        receiverName,
-        latitude: pos?.coords?.latitude,
-        longitude: pos?.coords?.longitude,
+        deliveredAt: new Date()
       });
+    }
 
-      // Update the linked order to 'delivered'
-      if (log.order?._id) {
-        await ordersAPI.update(log.order._id, { status: 'delivered', deliveredAt: new Date() });
-      }
+    toast.success('🎉 Delivery marked as complete!');
+    setModal(null);
+    fetchLog();
 
-      toast.success('🎉 Delivery marked as complete!');
-      setModal(null);
-      fetchLog();
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to update'); }
-    finally { setSaving(false); }
-  };
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Failed to update');
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) return <div className="loading-spinner"><div className="spinner" /></div>;
   if (!log) return <div style={{ padding: 20, textAlign: 'center', color: 'var(--gray-500)' }}>Delivery not found</div>;
 
   const isCompleted = log.status === 'delivered';
-  const hasPayment = !!log.payment;
+  const hasPayment = log.payment && log.payment.amount > 0;
   const orderTotal = log.order?.totalAmount || 0;
 
   return (
