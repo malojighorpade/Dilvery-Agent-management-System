@@ -496,8 +496,6 @@ export default function DeliveryDetail() {
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      // Update delivery log payment status
-      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'online' });
       toast.success('Online payment recorded!');
       setModal(null);
       fetchLog();
@@ -516,7 +514,6 @@ export default function DeliveryDetail() {
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'cash' });
       toast.success('Cash payment recorded!');
       setModal(null);
       fetchLog();
@@ -546,7 +543,6 @@ export default function DeliveryDetail() {
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      await deliveryAPI.updateStatus(id, { status: 'delivered', paymentCollected: true, paymentMode: 'cheque' });
       toast.success('Cheque recorded & photo saved!');
       setModal(null);
       fetchLog();

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { Plus, Pencil, UserX, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
-const EMPTY = { name: '', email: '', password: '', role: 'staff', phone: '', address: '' };
+const EMPTY = { name: '', email: '', password: '', role: 'delivery agent', phone: '', address: '' };
 
 export default function Employees() {
   const [users, setUsers] = useState([]); const [loading, setLoading] = useState(true);

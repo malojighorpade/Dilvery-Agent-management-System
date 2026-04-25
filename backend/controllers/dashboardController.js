@@ -24,7 +24,7 @@ exports.getAdminDashboard = async (req, res) => {
       DeliveryLog.countDocuments({ status: 'delivered', deliveredAt: { $gte: today } }),
       Payment.aggregate([{ $match: { createdAt: { $gte: thisMonthStart } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Payment.aggregate([{ $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      User.countDocuments({ role: 'staff', isActive: true }),
+      User.countDocuments({ role: 'delivery agent', isActive: true }),
       Store.countDocuments({ isActive: true }),
       Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Payment.aggregate([

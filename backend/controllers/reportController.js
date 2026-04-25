@@ -1,5 +1,5 @@
 const Order = require('../models/Order');
-const Payment = require('../models/Payment');
+const { Payment } = require('../models/Payment');
 const DeliveryLog = require('../models/DeliveryLog');
 const Attendance = require('../models/Attendance');
 const { Parser } = require('json2csv');

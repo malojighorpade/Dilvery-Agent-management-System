@@ -95,7 +95,7 @@ const storeDoc = await Store.findById(store);
             order: orderForLog._id,
             store: store,
             deliveryStaff: req.user._id,
-            status: 'completed',
+            status: 'delivered',
             items: orderForLog.items.map(i => ({
               product: i.product,
               orderedQty: i.quantity,
@@ -113,12 +113,21 @@ const storeDoc = await Store.findById(store);
 
     // Link to delivery log
     if (dLogId) {
-      await DeliveryLog.findByIdAndUpdate(dLogId, {
-        payment: payment._id,
-        paymentCollected: true,
-        paymentMode,
-        status: 'completed',
-      });
+      const existingLog = await DeliveryLog.findById(dLogId);
+      if (existingLog) {
+        const deliveredItems = (existingLog.items || []).map((item) => ({
+          ...item.toObject(),
+          deliveredQty: item.orderedQty || item.deliveredQty || 0,
+        }));
+
+        await DeliveryLog.findByIdAndUpdate(dLogId, {
+          payment: payment._id,
+          paymentMode,
+          status: 'delivered',
+          deliveredAt: new Date(),
+          items: deliveredItems,
+        });
+      }
     }
 
     // Get delivery log to find order
