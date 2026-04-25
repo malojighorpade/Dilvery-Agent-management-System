@@ -1,6 +1,8 @@
 const {Payment }= require('../models/Payment');
 const Invoice = require('../models/Invoice');
 const Store = require('../models/Store');
+const DeliveryLog = require('../models/DeliveryLog');
+const Order = require('../models/Order');
 
 exports.getPayments = async (req, res) => {
   try {
@@ -44,19 +46,112 @@ exports.getPayment = async (req, res) => {
   }
 };
 
+
 exports.createPayment = async (req, res) => {
   try {
-    const payment = await Payment.create({ ...req.body, collectedBy: req.user._id });
+    const {
+      store,
+      storeName, 
+      amount,
+      paymentMode,
+      transactionId, upiId,
+      chequeNumber, bankName, chequeDate, chequePhotoUrl,
+      cashDenominations,
+      notes,
+      deliveryLogId,    // ← Pass from frontend
+    } = req.body;
+const storeDoc = await Store.findById(store);
+    // Create payment
+    const payment = await Payment.create({
+      store,
+       storeName: storeDoc?.name || 'Store', 
+      
+      amount,
+      paymentMode,
+      transactionId: transactionId || undefined,
+      upiId: upiId || undefined,
+      chequeNumber: chequeNumber || undefined,
+      bankName: bankName || undefined,
+      chequeDate: chequeDate || undefined,
+      chequePhotoUrl: chequePhotoUrl || undefined,
+      cashDenominations: paymentMode === 'cash' ? cashDenominations : undefined,
+      notes: notes || undefined,
+      collectedBy: req.user._id,
+      collectedAt: new Date(),
+      status: 'completed',
+    });
 
-    // Update invoice status if linked
-    if (payment.invoice) {
-      await Invoice.findByIdAndUpdate(payment.invoice, { status: 'paid', paidAt: new Date() });
+    // Link to delivery log
+    if (deliveryLogId) {
+      await DeliveryLog.findByIdAndUpdate(deliveryLogId, {
+        payment: payment._id,
+        paymentCollected: true,
+        paymentMode,
+        
+        
+      });
     }
 
-    // Update store outstanding balance
-    await Store.findByIdAndUpdate(payment.store, { $inc: { outstandingBalance: -payment.amount } });
+    // Get delivery log to find order
+    const deliveryLog = await DeliveryLog.findById(deliveryLogId).populate('order');
+    const order = deliveryLog?.order;
 
-    req.io?.emit('payment:collected', payment);
+    // Auto-generate invoice
+    if (order && deliveryLog) {
+      const existingInvoice = await Invoice.findOne({ order: order._id });
+      
+      if (!existingInvoice) {
+        const orderDoc = await Order.findById(order._id)
+          .populate('industry', 'name contactPerson phone address gstin')
+          .populate('store', 'name ownerName phone address gstin')
+          .populate('items.product', 'name sku');
+
+        if (orderDoc) {
+          const subtotal = orderDoc.items.reduce((s, i) => s + i.quantity * i.price, 0);
+          const taxRate = 18;
+          const taxAmount = Math.round(subtotal * taxRate / 100);
+          const totalAmount = subtotal + taxAmount;
+
+          const invoice = await Invoice.create({
+            invoiceNumber: `INV-${Date.now()}`,
+            order: orderDoc._id,
+            store: orderDoc.store?._id,
+            industry: orderDoc.industry?._id,
+            items: orderDoc.items.map(i => ({
+              product: i.product?._id,
+              productName: i.product?.name,
+              quantity: i.quantity,
+              price: i.price,
+              total: i.quantity * i.price,
+            })),
+            subtotal,
+            taxRate,
+            taxAmount,
+            totalAmount,
+            status: 'sent',
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            createdBy: req.user._id,
+          });
+
+          // Link invoice to payment
+          payment.invoice = invoice._id;
+          await payment.save();
+
+          // Update order status
+          await Order.findByIdAndUpdate(order._id, { status: 'completed' });
+        }
+      }
+    }
+
+    // Emit real-time event
+    req.io?.emit('payment:collected', {
+      paymentId: payment._id,
+      store: payment.store,
+      amount,
+      paymentMode,
+      collectedBy: req.user._id,
+    });
+
     res.status(201).json({ success: true, data: payment });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

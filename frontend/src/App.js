@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// ✅ ADD THIS (IMPORTANT)
+
+// Auth
 import Register from './pages/Register';
+import Login from './pages/Login';
 
 // Admin Pages
 import AdminLayout from './components/admin/AdminLayout';
@@ -28,9 +30,6 @@ import MyDeliveries from './pages/staff/MyDeliveries';
 import DeliveryDetail from './pages/staff/DeliveryDetail';
 import StaffAttendance from './pages/staff/StaffAttendance';
 import StaffPayments from './pages/staff/StaffPayments';
-
-// Shared
-import Login from './pages/Login';
 
 
 // 🔐 Private Route
@@ -74,16 +73,20 @@ function AppRoutes() {
   return (
     <Routes>
 
-      {/* ✅ Register Route (ADDED CORRECTLY) */}
+      {/* Register */}
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
       {/* Login */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-      {/* Admin Routes */}
+      {/* Admin */}
       <Route
         path="/admin"
-        element={<PrivateRoute role="admin"><AdminLayout /></PrivateRoute>}
+        element={
+          <PrivateRoute role="admin">
+            <AdminLayout />
+          </PrivateRoute>
+        }
       >
         <Route index element={<Dashboard />} />
         <Route path="orders" element={<Orders />} />
@@ -99,16 +102,22 @@ function AppRoutes() {
         <Route path="attendance" element={<AttendanceAdmin />} />
       </Route>
 
-      {/* Staff Routes */}
+      {/* Staff */}
       <Route
         path="/staff"
-        element={<PrivateRoute role="delivery agent"><StaffLayout /></PrivateRoute>}
+        element={
+          <PrivateRoute role="delivery agent"> {/* ✅ FIXED HERE */}
+            <StaffLayout />
+          </PrivateRoute>
+        }
       >
         <Route index element={<StaffDashboard />} />
         <Route path="deliveries" element={<MyDeliveries />} />
         <Route path="deliveries/:id" element={<DeliveryDetail />} />
         <Route path="attendance" element={<StaffAttendance />} />
         <Route path="payments" element={<StaffPayments />} />
+    
+<Route path="deliveries/:id" element={<DeliveryDetail />} />
       </Route>
 
       {/* Default */}
@@ -126,6 +135,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+
         <Toaster
           position="top-right"
           toastOptions={{

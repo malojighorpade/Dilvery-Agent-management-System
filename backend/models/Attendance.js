@@ -4,6 +4,7 @@ const attendanceSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     date: { type: Date, required: true },
+
     checkIn: {
       time: { type: Date },
       location: {
@@ -12,6 +13,7 @@ const attendanceSchema = new mongoose.Schema(
       },
       address: { type: String },
     },
+
     checkOut: {
       time: { type: Date },
       location: {
@@ -20,8 +22,24 @@ const attendanceSchema = new mongoose.Schema(
       },
       address: { type: String },
     },
-    status: { type: String, enum: ['present', 'absent', 'half-day', 'leave'], default: 'present' },
+
+    status: {
+      type: String,
+      enum: ['present', 'absent', 'half-day', 'leave'],
+      default: 'present',
+    },
+
     hoursWorked: { type: Number, default: 0 },
+
+    // 🔥 NEW FIELDS
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+
     notes: { type: String },
   },
   { timestamps: true }
