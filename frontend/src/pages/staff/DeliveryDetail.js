@@ -637,7 +637,7 @@ export default function DeliveryDetail() {
 
 if (chequeData.photo) {
   const fd = new FormData();
-  fd.append('image', chequeData.photo);
+  fd.append('file', chequeData.photo);
 
   const res = await deliveryAPI.uploadProof(id, fd);
   proofUrl = res.data.imageUrl;
@@ -681,7 +681,7 @@ if (chequeData.photo) {
 
     if (proofPhoto) {
       const fd = new FormData();
-      fd.append('image', proofPhoto);
+      fd.append('file', proofPhoto);
 
       const res = await deliveryAPI.uploadProof(id, fd);
       proofUrl = res.data.imageUrl;
@@ -812,7 +812,7 @@ if (chequeData.photo) {
 
       {/* ACTION BUTTONS */}
       {!isCompleted && (
-        <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'white', borderTop: '1px solid var(--gray-200)', padding: '14px 16px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
+        <div style={{ position: 'fixed', bottom: 60, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'white', borderTop: '1px solid var(--gray-200)', padding: '14px 16px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
           {!hasPayment ? (
             <>
               <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--gray-500)', textAlign: 'center', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Collect Payment — ₹{orderTotal.toLocaleString()}</p>
