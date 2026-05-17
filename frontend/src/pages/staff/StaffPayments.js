@@ -1,8 +1,10 @@
+// ✅ UPDATED frontend/src/pages/staff/StaffPayments.js - WITH PAYMENT STATUS
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { paymentsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { CreditCard, TrendingUp, ArrowLeft, Banknote, Smartphone, CheckSquare, CheckCircle } from 'lucide-react';
+import { CreditCard, TrendingUp, ArrowLeft, Banknote, Smartphone, CheckSquare, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 const DENOMS = ['2000', '500', '200', '100', '50', '20', '10'];
@@ -37,8 +39,6 @@ function CollectPaymentForm({ order, paymentMode: initialMode, onDone, onBack })
     if (payForm.paymentMode === 'cheque' && !payForm.chequeNumber) return toast.error('Cheque number required');
 
     setSaving(true);
-    console.log("ORDER 👉", order);
-console.log("STORE 👉", order?.store);
     try {
       await paymentsAPI.create({
         store: order?.store?._id || order?.store,
@@ -46,8 +46,8 @@ console.log("STORE 👉", order?.store);
         amount: Number(payForm.amount),
         paymentMode: payForm.paymentMode,
         transactionId: payForm.transactionId || undefined,
-        deliveryLogId: order.deliveryLogId || undefined, // Link payment to delivery log for backend processing
-        orderId: order?._id || undefined, // Link order directly
+        deliveryLogId: order.deliveryLogId || undefined,
+        orderId: order?._id || undefined,
         upiId: payForm.upiId || undefined,
         chequeNumber: payForm.chequeNumber || undefined,
         bankName: payForm.bankName || undefined,
@@ -96,6 +96,31 @@ console.log("STORE 👉", order?.store);
         {order?.store?.name && <> · {order.store.name}</>}
       </p>
 
+      {/* ✅ PAYMENT STATUS BANNER */}
+      {order?.deliveryLogId && (
+        <div style={{
+          background: order?.paymentStatus === 'full_collected' ? '#f0fdf4' : order?.paymentStatus === 'partial_collected' ? '#fef3c7' : '#f3f4f6',
+          border: `1px solid ${order?.paymentStatus === 'full_collected' ? '#86efac' : order?.paymentStatus === 'partial_collected' ? '#fcd34d' : '#e5e7eb'}`,
+          borderRadius: 10,
+          padding: 12,
+          marginBottom: 16,
+          display: 'flex',
+          gap: 10,
+        }}>
+          <AlertCircle size={18} color={order?.paymentStatus === 'full_collected' ? '#16a34a' : '#f59e0b'} style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: '0.8rem' }}>
+            <div style={{ fontWeight: 600, color: order?.paymentStatus === 'full_collected' ? '#166534' : '#92400e' }}>
+              {order?.paymentStatus === 'full_collected' ? '✅ Full payment collected' : order?.paymentStatus === 'partial_collected' ? '⚠️ Partial payment collected' : '💰 Ready to collect payment'}
+            </div>
+            {order?.paymentStatus === 'partial_collected' && (
+              <div style={{ color: '#92400e', marginTop: 2 }}>
+                Collected: ₹{order?.amountCollected?.toLocaleString()} | Outstanding: ₹{order?.outstandingAmount?.toLocaleString()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mode switcher */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {Object.entries(modeConfig).map(([key, { label, icon: Icon, color, bg }]) => (
@@ -127,7 +152,10 @@ console.log("STORE 👉", order?.store);
         </div>
         {order?.totalAmount && Number(payForm.amount) !== order.totalAmount && (
           <p style={{ fontSize: '0.72rem', color: 'var(--gray-400)', marginTop: 4 }}>
-            Invoice total: ₹{order.totalAmount.toLocaleString()}
+            {order?.paymentStatus === 'partial_collected' 
+              ? `Outstanding: ₹${order?.outstandingAmount?.toLocaleString()}`
+              : `Invoice total: ₹${order.totalAmount.toLocaleString()}`
+            }
           </p>
         )}
       </div>
@@ -214,7 +242,6 @@ console.log("STORE 👉", order?.store);
 }
 
 // ─── Main StaffPayments ────────────────────────────────────────────────────────
-// 🔽 ONLY StaffPayments main return updated (rest unchanged above)
 
 export default function StaffPayments() {
   const location = useLocation();
@@ -271,7 +298,6 @@ export default function StaffPayments() {
     );
   }
 
-  // 🔥 Summary values
   const total = summary?.totalCollected || 0;
   const cash = summary?.summary?.find(s => s._id === 'cash')?.total || 0;
   const online = summary?.summary?.find(s => s._id === 'online')?.total || 0;
@@ -283,9 +309,8 @@ export default function StaffPayments() {
         My Collections
       </h1>
 
-      {/* 🔥 Summary Cards */}
+      {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        
         <div style={{ background: '#1e3a8a', color: 'white', padding: 16, borderRadius: 12 }}>
           <p style={{ fontSize: 12, opacity: 0.7 }}>Total</p>
           <h2 style={{ fontSize: 20, fontWeight: 800 }}>₹{total.toLocaleString()}</h2>
@@ -305,10 +330,9 @@ export default function StaffPayments() {
           <p style={{ fontSize: 12 }}>Cheque</p>
           <h2>₹{cheque.toLocaleString()}</h2>
         </div>
-
       </div>
 
-      {/* 🔥 Filter */}
+      {/* Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {['', 'cash', 'online', 'cheque'].map(m => (
           <button
@@ -327,7 +351,7 @@ export default function StaffPayments() {
         ))}
       </div>
 
-      {/* 🔥 Payments List */}
+      {/* Payments List */}
       {loading ? (
         <div className="loading-spinner"><div className="spinner" /></div>
       ) : payments.length === 0 ? (
@@ -341,8 +365,8 @@ export default function StaffPayments() {
           border: '1px solid #eee'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <strong>₹{p.amount}</strong>
-            <span style={{ textTransform: 'capitalize' }}>{p.paymentMode}</span>
+            <strong>₹{p.amount?.toLocaleString()}</strong>
+            <span style={{ textTransform: 'capitalize', fontSize: '0.8rem', fontWeight: 600, color: 'var(--gray-500)' }}>{p.paymentMode}</span>
           </div>
 
           <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>
@@ -350,7 +374,7 @@ export default function StaffPayments() {
           </div>
 
           <div style={{ fontSize: 12, color: '#888' }}>
-            {format(new Date(p.createdAt), 'dd MMM yyyy')}
+            {format(new Date(p.createdAt), 'dd MMM yyyy, HH:mm')}
           </div>
 
           {p.transactionId && (

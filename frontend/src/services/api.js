@@ -95,28 +95,60 @@ export const storesAPI = {
 export const ordersAPI = {
   getAll: (params) => API.get('/orders', { params }),
   getOne: (id) => API.get(`/orders/${id}`),
-  create: (data) => API.post('/orders', data),
+  create: (data) => {
+    // If FormData (for PDF upload), don't set Content-Type header
+    if (data instanceof FormData) {
+      return API.post('/orders', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return API.post('/orders', data);
+  },
   update: (id, data) => API.put(`/orders/${id}`, data),
   assignStaff: (id, data) => API.put(`/orders/${id}/assign`, data),
   delete: (id) => API.delete(`/orders/${id}`),
-
-  // ✅ Your route
   getMyOrders: (params) => API.get('/orders/my-orders', { params }),
+  
+  // ✅ PDF Upload helper
+  uploadPDF: (formData) => API.post('/orders/upload-pdf', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 // ================= INVOICES =================
 export const invoicesAPI = {
   getAll: (params) => API.get('/invoices', { params }),
   getOne: (id) => API.get(`/invoices/${id}`),
-  markPaid: (id) => API.put(`/invoices/${id}/mark-paid`, {}),
+  create: (data) => {
+    if (data instanceof FormData) {
+      return API.post('/invoices', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return API.post('/invoices', data);
+  },
+  update: (id, data) => API.put(`/invoices/${id}`, data),
+  delete: (id) => API.delete(`/invoices/${id}`),
+  markPaid: (id) => API.patch(`/invoices/${id}/mark-paid`),
 };
 
 // ================= PAYMENTS =================
 export const paymentsAPI = {
   getAll: (params) => API.get('/payments', { params }),
   getOne: (id) => API.get(`/payments/${id}`),
-  create: (data) => API.post('/payments', data),
+  create: (data) =>
+    API.post('/payments', data, {
+      headers: { 'Content-Type': 'application/json' },
+    }),
   getSummary: (params) => API.get('/payments/summary', { params }),
+  getDeliveryStatus: (deliveryLogId) =>
+    API.get(`/payments/delivery/${deliveryLogId}/status`),
+  collectPartial: (deliveryLogId, data) =>
+    API.post('/payments/collect-partial', { deliveryLogId, ...data }),
+  cancelDelivery: (deliveryLogId, reason, orderId) =>
+    API.post('/payments/cancel-delivery', { deliveryLogId, orderId, reason }),
+  markItemsReturned: (deliveryLogId, itemReturns, orderId) =>
+    API.post('/payments/mark-items-returned', { deliveryLogId, orderId, itemReturns }),
 };
 
 // ================= ATTENDANCE =================
@@ -130,30 +162,18 @@ export const attendanceAPI = {
   reject: (id) => API.put(`/attendance/reject/${id}`),
 };
 
-// ================= DELIVERY LOGS (🔥 FIXED) =================
+// ================= DELIVERY LOGS =================
 export const deliveryAPI = {
   getAll: (params) => API.get('/delivery-logs', { params }),
-
   getOne: (id) => API.get(`/delivery-logs/${id}`),
-
   create: (data) => API.post('/delivery-logs', data),
-
-  // ✅ FIXED (IMPORTANT)
-  getByOrder: (orderId) =>
-    API.get(`/delivery-logs/order/${orderId}`),
-
+  getByOrder: (orderId) => API.get(`/delivery-logs/order/${orderId}`),
   update: (id, data) => API.put(`/delivery-logs/${id}`, data),
-
-  updateStatus: (id, data) =>
-    API.put(`/delivery-logs/${id}/status`, data),
-
-  uploadProof: (id, formData) =>
-    API.post(`/delivery-logs/${id}/proof`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-
-  getMyDeliveries: (params) =>
-    API.get('/delivery-logs/my', { params }),
+  updateStatus: (id, data) => API.put(`/delivery-logs/${id}/status`, data),
+  uploadProof: (id, formData) => API.post(`/delivery-logs/${id}/proof`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getMyDeliveries: (params) => API.get('/delivery-logs/my', { params }),
 };
 
 // ================= DASHBOARD =================
@@ -167,8 +187,7 @@ export const reportsAPI = {
   getSales: (params) => API.get('/reports/sales', { params }),
   getDeliveries: (params) => API.get('/reports/deliveries', { params }),
   getPayments: (params) => API.get('/reports/payments', { params }),
-  exportCSV: (params) =>
-    API.get('/reports/export', { params, responseType: 'blob' }),
+  exportCSV: (params) => API.get('/reports/export', { params, responseType: 'blob' }),
 };
 
 export default API;

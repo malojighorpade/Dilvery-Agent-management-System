@@ -1,18 +1,23 @@
+// ✅ UPDATED backend/models/Payment.js - WITH ORDER & DELIVERY TRACKING
+
 const mongoose = require('mongoose');
 
 //
-// 🔹 MAIN PAYMENT (COMMON TABLE)
+// 🔹 MAIN PAYMENT (COMMON TABLE) - UPDATED
 //
 const paymentSchema = new mongoose.Schema(
   {
     paymentNumber: { type: String, unique: true },
 
+    // ─── LINKED RECORDS ──────────────────────────────────────────────────
     invoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
+    order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' }, // ✅ NEW
+    deliveryLog: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryLog' }, // ✅ NEW
 
     store: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', required: true },
-
     storeName: { type: String, required: true, trim: true },
 
+    // ─── PAYMENT DETAILS ─────────────────────────────────────────────────
     amount: { type: Number, required: true },
 
     paymentMode: {
@@ -20,6 +25,13 @@ const paymentSchema = new mongoose.Schema(
       enum: ['cash', 'online', 'cheque'],
       required: true,
       lowercase: true
+    },
+
+    // ─── PAYMENT TYPE (NEW) ──────────────────────────────────────────────
+    paymentType: {
+      type: String,
+      enum: ['full', 'partial', 'installment'],
+      default: 'full'
     },
 
     collectedBy: {
@@ -37,6 +49,27 @@ const paymentSchema = new mongoose.Schema(
     },
 
     notes: String,
+
+    // ─── ONLINE PAYMENT DATA ────────────────────────────────────────────
+    transactionId: String,
+    upiId: String,
+
+    // ─── CHEQUE PAYMENT DATA ────────────────────────────────────────────
+    chequeNumber: String,
+    bankName: String,
+    chequeDate: Date,
+    chequeImage: String,
+
+    // ─── CASH PAYMENT DATA ──────────────────────────────────────────────
+    cashDenominations: {
+      '2000': { type: Number, default: 0 },
+      '500': { type: Number, default: 0 },
+      '200': { type: Number, default: 0 },
+      '100': { type: Number, default: 0 },
+      '50': { type: Number, default: 0 },
+      '20': { type: Number, default: 0 },
+      '10': { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

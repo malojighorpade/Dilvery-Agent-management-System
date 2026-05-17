@@ -4,6 +4,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
+const paymentRoutes = require('./routes/payments');
+
+
 
 dotenv.config();
 
@@ -18,6 +21,8 @@ const io = new Server(server, {
 });
 
 // Middleware
+
+// Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
@@ -25,6 +30,18 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/brands', require('./routes/brands'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/industries', require('./routes/industries'));
+app.use('/api/stores', require('./routes/stores'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/payments', paymentRoutes);
 
 // Socket access
 app.use((req, res, next) => {
@@ -42,7 +59,7 @@ app.use('/api/industries', require('./routes/industries'));
 app.use('/api/stores', require('./routes/stores'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/invoices', require('./routes/invoices'));
-app.use('/api/payments', require('./routes/payments'));
+app.use('/api/payments', paymentRoutes);
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/delivery-logs', require('./routes/deliveryLogs'));
 app.use('/api/reports', require('./routes/reports'));
@@ -82,5 +99,14 @@ mongoose.connect(process.env.MONGO_URI)
     console.error('❌ MongoDB connection error:', err);
     process.exit(1);
   });
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('GLOBAL ERROR:', err);
 
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Server Error',
+    error: err,
+  });
+});
 module.exports = { app, io };

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { deliveryAPI, paymentsAPI, ordersAPI } from '../../services/api';
 import StatusBadge from '../../components/shared/StatusBadge';
+import PaymentStatusModal from './PaymentStatusModal';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Camera, CreditCard, CheckCircle, MapPin, Phone,
   Banknote, Smartphone, FileCheck, QrCode, Package,
-  AlertTriangle, Check, X, ScanLine, RefreshCw
+  AlertTriangle, Check, X, ScanLine, RefreshCw, DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -15,13 +16,15 @@ const DENOMS = ['2000', '500', '200', '100', '50', '20', '10'];
 // ─────────────────────────────────────────────────────────────────
 // QR SCANNER MODAL (Online Payment)
 // ─────────────────────────────────────────────────────────────────
-function QRScannerModal({ amount, store, onConfirm, onClose }) {
+function QRScannerModal({ amount, outstanding, store, onConfirm, onClose }) {
   const [txnId, setTxnId] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [collectAmount, setCollectAmount] = useState(String(outstanding ?? amount));
   const [step, setStep] = useState('scan'); // scan | confirm
+  const payAmount = Number(collectAmount) || 0;
 
   // Generate UPI deep link (works on mobile)
-  const upiString = `upi://pay?pa=distributeiq@upi&pn=DistributeIQ&am=${amount}&cu=INR&tn=Order+Payment+${store?.name}`;
+  const upiString = `upi://pay?pa=distributeiq@upi&pn=DistributeIQ&am=${payAmount}&cu=INR&tn=Order+Payment+${store?.name}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiString)}`;
 
   return (
@@ -42,8 +45,11 @@ function QRScannerModal({ amount, store, onConfirm, onClose }) {
           <>
             {/* Amount */}
             <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: 16, padding: '16px 20px', marginBottom: 20, textAlign: 'center', color: 'white' }}>
-              <p style={{ fontSize: '0.75rem', opacity: 0.8, marginBottom: 4 }}>Amount to Collect</p>
-              <p style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'Space Grotesk' }}>₹{Number(amount).toLocaleString()}</p>
+              <p style={{ fontSize: '0.75rem', opacity: 0.8, marginBottom: 4 }}>Outstanding to Collect</p>
+              <p style={{ fontSize: '2.2rem', fontWeight: 800, fontFamily: 'Space Grotesk' }}>₹{Number(outstanding ?? amount).toLocaleString()}</p>
+              {Number(amount) !== Number(outstanding ?? amount) && (
+                <p style={{ fontSize: '0.72rem', opacity: 0.85, marginTop: 4 }}>Order total: ₹{Number(amount).toLocaleString()}</p>
+              )}
             </div>
 
             {/* QR Code */}
@@ -84,6 +90,22 @@ function QRScannerModal({ amount, store, onConfirm, onClose }) {
             </div>
 
             <div className="form-group">
+              <label className="form-label">Amount collected (₹) *</label>
+              <input
+                className="form-control"
+                type="number"
+                min="1"
+                max={outstanding ?? amount}
+                value={collectAmount}
+                onChange={e => setCollectAmount(e.target.value)}
+                style={{ fontSize: '1.1rem', fontWeight: 700 }}
+              />
+              <p style={{ fontSize: '0.72rem', color: 'var(--gray-400)', marginTop: 4 }}>
+                Max: ₹{Number(outstanding ?? amount).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Transaction / UTR ID *</label>
               <input
                 className="form-control"
@@ -111,11 +133,18 @@ function QRScannerModal({ amount, store, onConfirm, onClose }) {
                 Back to QR
               </button>
               <button
-                onClick={() => { if (!txnId.trim()) return toast.error('Enter transaction ID'); onConfirm({ transactionId: txnId, upiId }); }}
+                onClick={() => {
+                  if (!txnId.trim()) return toast.error('Enter transaction ID');
+                  const amt = Number(collectAmount);
+                  const max = Number(outstanding ?? amount);
+                  if (!amt || amt <= 0) return toast.error('Enter valid amount');
+                  if (amt > max) return toast.error(`Cannot collect more than ₹${max}`);
+                  onConfirm({ transactionId: txnId, upiId, collectedAmount: amt });
+                }}
                 className="btn btn-success"
                 style={{ flex: 2, justifyContent: 'center', borderRadius: 10 }}
               >
-                <CheckCircle size={16} /> Confirm ₹{Number(amount).toLocaleString()}
+                <CheckCircle size={16} /> Confirm ₹{payAmount.toLocaleString()}
               </button>
             </div>
           </>
@@ -128,11 +157,12 @@ function QRScannerModal({ amount, store, onConfirm, onClose }) {
 // ─────────────────────────────────────────────────────────────────
 // CASH MODAL — denomination entry
 // ─────────────────────────────────────────────────────────────────
-function CashModal({ amount, store, onConfirm, onClose }) {
+function CashModal({ amount, outstanding, store, onConfirm, onClose }) {
   const [denoms, setDenoms] = useState({});
+  const maxCollect = Number(outstanding ?? amount);
 
   const total = DENOMS.reduce((s, d) => s + (Number(denoms[d] || 0) * Number(d)), 0);
-  const diff = total - Number(amount);
+  const diff = total - maxCollect;
 
   const updateDenom = (d, val) => setDenoms(prev => ({ ...prev, [d]: val === '' ? '' : Number(val) }));
 
@@ -152,8 +182,11 @@ function CashModal({ amount, store, onConfirm, onClose }) {
         {/* Expected amount */}
         <div style={{ background: 'linear-gradient(135deg, #065f46, #16a34a)', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
           <div>
-            <p style={{ fontSize: '0.7rem', opacity: 0.8 }}>EXPECTED AMOUNT</p>
-            <p style={{ fontSize: '1.8rem', fontWeight: 800, fontFamily: 'Space Grotesk' }}>₹{Number(amount).toLocaleString()}</p>
+            <p style={{ fontSize: '0.7rem', opacity: 0.8 }}>OUTSTANDING AMOUNT</p>
+            <p style={{ fontSize: '1.8rem', fontWeight: 800, fontFamily: 'Space Grotesk' }}>₹{maxCollect.toLocaleString()}</p>
+            {Number(amount) !== maxCollect && (
+              <p style={{ fontSize: '0.7rem', opacity: 0.85, marginTop: 4 }}>Order total: ₹{Number(amount).toLocaleString()}</p>
+            )}
           </div>
           <Banknote size={36} style={{ opacity: 0.5 }} />
         </div>
@@ -193,7 +226,7 @@ function CashModal({ amount, store, onConfirm, onClose }) {
             <strong style={{ fontSize: '0.9rem' }}>₹{total.toLocaleString()}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>{diff === 0 ? '✅ Exact amount' : diff > 0 ? `⚠️ Excess (change: ₹${diff})` : `⚠️ Short by ₹${Math.abs(diff)}`}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>{diff === 0 ? '✅ Exact amount' : diff > 0 ? `⚠️ Excess (₹${diff} over outstanding)` : `⚠️ Partial — short by ₹${Math.abs(diff)}`}</span>
             <strong style={{ fontSize: '0.9rem', color: diff === 0 ? '#16a34a' : diff > 0 ? '#d97706' : '#dc2626' }}>
               {diff === 0 ? 'Perfect' : diff > 0 ? `+₹${diff}` : `-₹${Math.abs(diff)}`}
             </strong>
@@ -203,13 +236,14 @@ function CashModal({ amount, store, onConfirm, onClose }) {
         <button
           onClick={() => {
             if (total <= 0) return toast.error('Enter cash denominations');
-            if (total !== Number(amount)) return toast.error('Make full payment');
+            if (total > maxCollect) return toast.error(`Cannot collect more than ₹${maxCollect}`);
             onConfirm({ cashDenominations: denoms, collectedAmount: total });
           }}
           className="btn btn-success btn-lg"
           style={{ width: '100%', justifyContent: 'center', borderRadius: 12 }}
         >
           <CheckCircle size={18} /> Confirm ₹{total.toLocaleString()} Cash Collected
+          {total < maxCollect && ` (Partial)`}
         </button>
       </div>
     </div>
@@ -219,73 +253,76 @@ function CashModal({ amount, store, onConfirm, onClose }) {
 // ─────────────────────────────────────────────────────────────────
 // CHEQUE MODAL — camera capture + details
 // ─────────────────────────────────────────────────────────────────
-function ChequeModal({ amount, store, onConfirm, onClose }) {
+function ChequeModal({ amount, outstanding, store, onConfirm, onClose }) {
+  const [collectAmount, setCollectAmount] = useState(String(outstanding ?? amount));
   const [chequeData, setChequeData] = useState({ chequeNumber: '', bankName: '', chequeDate: '', photo: null, photoPreview: null });
   const [cameraMode, setCameraMode] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
- const startCamera = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false
-    });
 
-    streamRef.current = stream;
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      });
 
-    if (videoRef.current) {
-      const video = videoRef.current;
-      video.srcObject = stream;
+      streamRef.current = stream;
 
-      video.onloadedmetadata = () => {
-        video.play();
-      };
+      if (videoRef.current) {
+        const video = videoRef.current;
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+          video.play();
+        };
+      }
+
+      setCameraMode(true);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Camera error");
     }
+  };
 
-    setCameraMode(true);
-
-  } catch (err) {
-    console.error(err);
-    toast.error("Camera error");
-  }
-};
   const capturePhoto = () => {
-  const video = videoRef.current;
+    const video = videoRef.current;
 
-  if (!video || video.readyState < 2) {
-    toast.error("Camera still loading...");
-    return;
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0);
-
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      toast.error("Failed to capture image");
+    if (!video || video.readyState < 2) {
+      toast.error("Camera still loading...");
       return;
     }
 
-    const file = new File([blob], 'cheque.jpg', { type: 'image/jpeg' });
-    const url = URL.createObjectURL(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    setChequeData(d => ({
-      ...d,
-      photo: file,
-      photoPreview: url
-    }));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
 
-    // stop camera
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    setCameraMode(false);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        toast.error("Failed to capture image");
+        return;
+      }
 
-    toast.success("Cheque photo captured!");
-  }, 'image/jpeg', 0.9);
-};
+      const file = new File([blob], 'cheque.jpg', { type: 'image/jpeg' });
+      const url = URL.createObjectURL(file);
+
+      setChequeData(d => ({
+        ...d,
+        photo: file,
+        photoPreview: url
+      }));
+
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      setCameraMode(false);
+
+      toast.success("Cheque photo captured!");
+    }, 'image/jpeg', 0.9);
+  };
+
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     setCameraMode(false);
@@ -295,7 +332,11 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
 
   const handleConfirm = () => {
     if (!chequeData.chequeNumber.trim()) return toast.error('Enter cheque number');
-    onConfirm(chequeData);
+    const amt = Number(collectAmount);
+    const max = Number(outstanding ?? amount);
+    if (!amt || amt <= 0) return toast.error('Enter valid amount');
+    if (amt > max) return toast.error(`Cannot collect more than ₹${max}`);
+    onConfirm({ ...chequeData, collectedAmount: amt });
   };
 
   return (
@@ -304,29 +345,28 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', fontFamily: 'Space Grotesk' }}>Cheque Collection</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>₹{Number(amount).toLocaleString()} · {store?.name}</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Outstanding ₹{Number(outstanding ?? amount).toLocaleString()} · {store?.name}</p>
           </div>
           <button onClick={onClose} style={{ background: 'var(--gray-100)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Camera view */}
         {cameraMode ? (
           <div style={{ marginBottom: 16 }}>
             <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: 250, objectFit: 'cover' }} />
             <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-             <button
-  type="button"
-  onClick={() => {
-    streamRef.current?.getTracks().forEach(track => track.stop());
-    setCameraMode(false);
-  }}
-  className="btn btn-secondary"
-  style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}
->
-  <X size={14} /> Cancel
-</button>
+              <button
+                type="button"
+                onClick={() => {
+                  streamRef.current?.getTracks().forEach(track => track.stop());
+                  setCameraMode(false);
+                }}
+                className="btn btn-secondary"
+                style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}
+              >
+                <X size={14} /> Cancel
+              </button>
               <button onClick={capturePhoto} className="btn btn-primary" style={{ flex: 2, justifyContent: 'center', borderRadius: 10, background: '#dc2626' }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#dc2626' }} />
@@ -336,7 +376,6 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
             </div>
           </div>
         ) : (
-          /* Cheque photo area */
           <div
             onClick={() => !chequeData.photoPreview && startCamera()}
             style={{ border: `2px dashed ${chequeData.photoPreview ? 'transparent' : 'var(--gray-300)'}`, borderRadius: 12, marginBottom: 16, overflow: 'hidden', cursor: chequeData.photoPreview ? 'default' : 'pointer', minHeight: 140 }}
@@ -368,6 +407,19 @@ function ChequeModal({ amount, store, onConfirm, onClose }) {
             )}
           </div>
         )}
+
+        <div className="form-group">
+          <label className="form-label">Amount on cheque (₹) *</label>
+          <input
+            className="form-control"
+            type="number"
+            min="1"
+            max={outstanding ?? amount}
+            value={collectAmount}
+            onChange={e => setCollectAmount(e.target.value)}
+            style={{ fontWeight: 700, fontSize: '1.1rem' }}
+          />
+        </div>
 
         {/* Cheque details */}
         <div className="form-group">
@@ -405,36 +457,36 @@ function DeliveryCompleteModal({ log, onConfirm, onClose }) {
   const [saving, setSaving] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
-const startCamera = async () => {
-  try {
-    setIsCameraReady(false); // ✅ add this
+  const startCamera = async () => {
+    try {
+      setIsCameraReady(false);
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false
-    });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      });
 
-    streamRef.current = stream;
+      streamRef.current = stream;
 
-    if (videoRef.current) {
-      const video = videoRef.current;
-      video.srcObject = stream;
+      if (videoRef.current) {
+        const video = videoRef.current;
+        video.srcObject = stream;
 
-      await video.play();
-      video.onloadedmetadata = () => {
-  video.play();
-  setIsCameraReady(true); // ✅ accurate trigger
-};
+        await video.play();
+        video.onloadedmetadata = () => {
+          video.play();
+          setIsCameraReady(true);
+        };
+      }
 
+      setCameraActive(true);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Camera error");
     }
+  };
 
-    setCameraActive(true); // ✅ keep this
-
-  } catch (err) {
-    console.error(err);
-    toast.error("Camera error");
-  }
-};
   const captureProof = () => {
     console.log("Capture clicked");
 
@@ -466,12 +518,11 @@ const startCamera = async () => {
 
       streamRef.current?.getTracks().forEach(t => t.stop());
       setCameraActive(false);
-  setIsCameraReady(false); 
+      setIsCameraReady(false);
 
       toast.success("Photo captured!");
     }, 'image/jpeg', 0.9);
   };
-
 
   useEffect(() => () => streamRef.current?.getTracks().forEach(t => t.stop()), []);
 
@@ -515,8 +566,7 @@ const startCamera = async () => {
             <div>
               <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: 10, background: '#000', maxHeight: 220, objectFit: 'cover' }} />
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button type="button" onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setCameraActive(false); 
-setIsCameraReady(false); }} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}><X size={14} /> Cancel</button>
+                <button type="button" onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setCameraActive(false); setIsCameraReady(false); }} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 8 }}><X size={14} /> Cancel</button>
                 <button
                   type="button"
                   disabled={!isCameraReady}
@@ -564,7 +614,7 @@ export default function DeliveryDetail() {
   const navigate = useNavigate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // 'cash' | 'online' | 'cheque' | 'complete'
+  const [modal, setModal] = useState(null); // 'cash' | 'online' | 'cheque' | 'complete' | 'status'
   const [saving, setSaving] = useState(false);
 
   const fetchLog = async () => {
@@ -591,19 +641,20 @@ export default function DeliveryDetail() {
   }, [id]);
 
   // ── Payment handlers ─────────────────────────────────────────
-  const handleOnlinePayment = async ({ transactionId, upiId }) => {
+  const handleOnlinePayment = async ({ transactionId, upiId, collectedAmount }) => {
     setSaving(true);
     try {
-      await paymentsAPI.create({
+      const r = await paymentsAPI.create({
         store: log.store?._id,
-        amount: log.order?.totalAmount || 0,
+        amount: collectedAmount,
         paymentMode: 'online',
         transactionId,
         upiId: upiId || undefined,
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      toast.success('Online payment recorded!');
+      const isPartial = r.data?.paymentType === 'partial';
+      toast.success(isPartial ? 'Partial payment recorded!' : 'Online payment recorded!');
       setModal(null);
       fetchLog();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
@@ -613,7 +664,7 @@ export default function DeliveryDetail() {
   const handleCashPayment = async ({ cashDenominations, collectedAmount }) => {
     setSaving(true);
     try {
-      await paymentsAPI.create({
+      const r = await paymentsAPI.create({
         store: log.store?._id,
         amount: collectedAmount,
         paymentMode: 'cash',
@@ -621,7 +672,8 @@ export default function DeliveryDetail() {
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      toast.success('Cash payment recorded!');
+      const isPartial = r.data?.paymentType === 'partial';
+      toast.success(isPartial ? 'Partial cash payment recorded!' : 'Cash payment recorded!');
       setModal(null);
       fetchLog();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
@@ -631,30 +683,29 @@ export default function DeliveryDetail() {
   const handleChequePayment = async (chequeData) => {
     setSaving(true);
     try {
-      // Upload cheque photo if taken
-      // Upload proof photo if taken
       let proofUrl = null;
 
-if (chequeData.photo) {
-  const fd = new FormData();
-  fd.append('file', chequeData.photo);
+      if (chequeData.photo) {
+        const fd = new FormData();
+        fd.append('file', chequeData.photo);
 
-  const res = await deliveryAPI.uploadProof(id, fd);
-  proofUrl = res.data.imageUrl;
-}
+        const res = await deliveryAPI.uploadProof(id, fd);
+        proofUrl = res.data.imageUrl;
+      }
 
-      await paymentsAPI.create({
+      const r = await paymentsAPI.create({
         store: log.store?._id,
-        amount: log.order?.totalAmount || 0,
+        amount: chequeData.collectedAmount,
         paymentMode: 'cheque',
         chequeNumber: chequeData.chequeNumber,
         bankName: chequeData.bankName,
         chequeDate: chequeData.chequeDate,
-        proofOfDelivery: proofUrl ,
+        proofOfDelivery: proofUrl,
         deliveryLogId: log._id,
         orderId: log.order?._id,
       });
-      toast.success('Cheque recorded & photo saved!');
+      const isPartial = r.data?.paymentType === 'partial';
+      toast.success(isPartial ? 'Partial cheque payment recorded!' : 'Cheque recorded & photo saved!');
       setModal(null);
       fetchLog();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
@@ -662,66 +713,67 @@ if (chequeData.photo) {
   };
 
   // ── Delivery complete handler ────────────────────────────────
- const handleDeliveryComplete = async ({ items, receiverName, proofPhoto }) => {
-  if (!log.payment) {
-    toast.error("Collect payment first");
-    return;
-  }
-
-  setSaving(true);
-
-  try {
-    // Get geo location
-    const pos = await new Promise((res, rej) =>
-      navigator.geolocation?.getCurrentPosition(res, rej, { timeout: 5000 })
-    ).catch(() => null);
-
-    // Upload proof photo if taken
-    let proofUrl = null;
-
-    if (proofPhoto) {
-      const fd = new FormData();
-      fd.append('file', proofPhoto);
-
-      const res = await deliveryAPI.uploadProof(id, fd);
-      proofUrl = res.data.imageUrl;
+  const handleDeliveryComplete = async ({ items, receiverName, proofPhoto }) => {
+    const collected = log.totalPaymentCollected || 0;
+    if (collected <= 0 && !log.payment) {
+      toast.error('Collect at least partial payment first');
+      return;
     }
 
-    // Update delivery
-    await deliveryAPI.updateStatus(id, {
-      status: 'delivered',
-      items,
-      receiverName,
-      ...(proofUrl && { proofOfDelivery: proofUrl }), // cleaner
-      latitude: pos?.coords?.latitude,
-      longitude: pos?.coords?.longitude
-    });
+    setSaving(true);
 
-    // Update order
-    if (log.order?._id) {
-      await ordersAPI.update(log.order._id, {
+    try {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation?.getCurrentPosition(res, rej, { timeout: 5000 })
+      ).catch(() => null);
+
+      let proofUrl = null;
+
+      if (proofPhoto) {
+        const fd = new FormData();
+        fd.append('file', proofPhoto);
+
+        const res = await deliveryAPI.uploadProof(id, fd);
+        proofUrl = res.data.imageUrl;
+      }
+
+      await deliveryAPI.updateStatus(id, {
         status: 'delivered',
-        deliveredAt: new Date()
+        items,
+        receiverName,
+        ...(proofUrl && { proofOfDelivery: proofUrl }),
+        latitude: pos?.coords?.latitude,
+        longitude: pos?.coords?.longitude
       });
+
+      if (log.order?._id) {
+        await ordersAPI.update(log.order._id, {
+          status: 'delivered',
+          deliveredAt: new Date()
+        });
+      }
+
+      toast.success('🎉 Delivery marked as complete!');
+      setModal(null);
+      fetchLog();
+
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to update');
+    } finally {
+      setSaving(false);
     }
-
-    toast.success('🎉 Delivery marked as complete!');
-    setModal(null);
-    fetchLog();
-
-  } catch (e) {
-    toast.error(e.response?.data?.message || 'Failed to update');
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   if (loading) return <div className="loading-spinner"><div className="spinner" /></div>;
   if (!log) return <div style={{ padding: 20, textAlign: 'center', color: 'var(--gray-500)' }}>Delivery not found</div>;
 
-  const isCompleted = log.status === 'delivered';
-  const hasPayment = log.payment && log.payment.amount > 0;
+  const isCompleted = log.status === 'delivered' || log.status === 'completed';
   const orderTotal = log.order?.totalAmount || 0;
+  const collectedTotal = log.totalPaymentCollected ?? log.payment?.amount ?? 0;
+  const outstanding = Math.max(0, orderTotal - collectedTotal);
+  const paymentStatus = log.paymentStatus || (collectedTotal <= 0 ? 'not_collected' : collectedTotal >= orderTotal ? 'full_collected' : 'partial_collected');
+  const hasPayment = collectedTotal > 0;
+  const isFullyPaid = paymentStatus === 'full_collected';
 
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
@@ -787,12 +839,24 @@ if (chequeData.photo) {
 
       {/* Payment Status */}
       {hasPayment && (
-        <div style={{ background: '#f0fdf4', borderRadius: 14, border: '1px solid #86efac', padding: '14px 16px', marginBottom: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <CheckCircle size={22} color="#16a34a" style={{ flexShrink: 0 }} />
+        <div style={{
+          background: isFullyPaid ? '#f0fdf4' : '#fffbeb',
+          borderRadius: 14,
+          border: `1px solid ${isFullyPaid ? '#86efac' : '#fcd34d'}`,
+          padding: '14px 16px',
+          marginBottom: 14,
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+        }}>
+          <CheckCircle size={22} color={isFullyPaid ? '#16a34a' : '#d97706'} style={{ flexShrink: 0 }} />
           <div>
-            <p style={{ fontWeight: 700, color: '#166534', fontSize: '0.9rem' }}>Payment Collected</p>
-            <p style={{ fontSize: '0.78rem', color: '#4ade80', marginTop: 2, textTransform: 'capitalize' }}>
-              ₹{log.payment?.amount?.toLocaleString()} via {log.payment?.paymentMode}
+            <p style={{ fontWeight: 700, color: isFullyPaid ? '#166534' : '#92400e', fontSize: '0.9rem' }}>
+              {isFullyPaid ? 'Full Payment Collected' : 'Partial Payment Collected'}
+            </p>
+            <p style={{ fontSize: '0.78rem', color: isFullyPaid ? '#4ade80' : '#b45309', marginTop: 2 }}>
+              Collected: ₹{collectedTotal.toLocaleString()} / ₹{orderTotal.toLocaleString()}
+              {outstanding > 0 && ` · Outstanding: ₹${outstanding.toLocaleString()}`}
             </p>
           </div>
         </div>
@@ -815,7 +879,7 @@ if (chequeData.photo) {
         <div style={{ position: 'fixed', bottom: 60, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'white', borderTop: '1px solid var(--gray-200)', padding: '14px 16px', boxShadow: '0 -4px 20px rgba(0,0,0,0.1)', zIndex: 50 }}>
           {!hasPayment ? (
             <>
-              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--gray-500)', textAlign: 'center', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Collect Payment — ₹{orderTotal.toLocaleString()}</p>
+              <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--gray-500)', textAlign: 'center', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Collect Payment — Outstanding ₹{outstanding.toLocaleString()}</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <button onClick={() => setModal('cash')} style={{ padding: '12px 6px', border: '2px solid #86efac', borderRadius: 12, background: '#f0fdf4', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                   <Banknote size={22} color="#16a34a" />
@@ -832,18 +896,35 @@ if (chequeData.photo) {
               </div>
             </>
           ) : (
-            <button onClick={() => setModal('complete')} className="btn btn-success btn-lg" style={{ width: '100%', justifyContent: 'center', borderRadius: 12, fontSize: '1rem' }}>
-              <CheckCircle size={18} /> Mark Delivery as Complete
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setModal('status')} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', borderRadius: 12, fontSize: '0.9rem' }}>
+                <DollarSign size={16} /> Manage Payment
+              </button>
+              <button onClick={() => setModal('complete')} className="btn btn-success" style={{ flex: 2, justifyContent: 'center', borderRadius: 12, fontSize: '0.9rem' }}>
+                <CheckCircle size={16} /> Complete Delivery
+              </button>
+            </div>
           )}
         </div>
       )}
 
       {/* MODALS */}
-      {modal === 'online' && <QRScannerModal amount={orderTotal} store={log.store} onConfirm={handleOnlinePayment} onClose={() => setModal(null)} />}
-      {modal === 'cash' && <CashModal amount={orderTotal} store={log.store} onConfirm={handleCashPayment} onClose={() => setModal(null)} />}
-      {modal === 'cheque' && <ChequeModal amount={orderTotal} store={log.store} onConfirm={handleChequePayment} onClose={() => setModal(null)} />}
+      {modal === 'online' && <QRScannerModal amount={orderTotal} outstanding={outstanding} store={log.store} onConfirm={handleOnlinePayment} onClose={() => setModal(null)} />}
+      {modal === 'cash' && <CashModal amount={orderTotal} outstanding={outstanding} store={log.store} onConfirm={handleCashPayment} onClose={() => setModal(null)} />}
+      {modal === 'cheque' && <ChequeModal amount={orderTotal} outstanding={outstanding} store={log.store} onConfirm={handleChequePayment} onClose={() => setModal(null)} />}
       {modal === 'complete' && <DeliveryCompleteModal log={log} onConfirm={handleDeliveryComplete} onClose={() => setModal(null)} />}
+      {modal === 'status' && (
+        <PaymentStatusModal
+          open={modal === 'status'}
+          onClose={() => setModal(null)}
+          onBack={() => setModal(null)}
+          deliveryLog={log}
+          orderAmount={orderTotal}
+          orderType={log.order?.orderType}
+          onPaymentUpdate={fetchLog}
+          onPaymentComplete={fetchLog}
+        />
+      )}
     </div>
   );
 }
